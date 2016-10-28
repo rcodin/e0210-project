@@ -54,6 +54,38 @@ public class SymbolicExecution extends SceneTransformer {
 		project = proj;
 		testcase = test;
 	}
+	/*helper function
+	gets block ID list of execeptional block graph from ball ID list
+	*/
+	ArrayList<Integer> getBlockIDList(HashMap<Integer,LinkedList<Integer>> paths, ArrayList<Integer> ballIDs) {
+		ArrayList<Integer> ret = new ArrayList(1000);
+		Iterator<Integer> ballIDIt = ballIDs.iterator();
+		
+		while (ballIDIt.hasNext()) {
+			Integer ballID = ballIDIt.next();
+			ListIterator<Integer> listIt = paths.get(ballID).listIterator();
+			
+			while (listIt.hasNext()) {
+				Integer blockID = listIt.next();
+				ret.add(blockID);
+			}
+		}
+		// System.out.println(ret);
+		return ret;
+	}
+	ArrayList<Integer> getRemovedArrayElement() {
+		ArrayList<Integer> ret = new ArrayList(1);
+		
+		ret.add(0, -1);
+		return ret;
+	}
+	ArrayList<Block> getBlocks(SootMethod method) {
+		ArrayList<Block> ret = new ArrayList(1000);
+		ExceptionalBlockGraph bGraph = new ExceptionalBlockGraph(method.getActiveBody());
+		// Iterator = 
+		ret.addAll(bGraph.getBlocks());
+		return ret;
+	}
 	@Override
 	protected void internalTransform(String phaseName, Map<String, String> options) {
 
@@ -192,9 +224,6 @@ public class SymbolicExecution extends SceneTransformer {
 		}
 		// System.out.println(table.toString());
 		/*Start traversing through code*/
-		HashMap<String,HashMap<Integer,ArrayList<Integer>>> mainMethods = table.get("1");
-		Iterator<String> mainSigs = mainMethods.keySet().iterator();
-		
 		// HashMap<String, String> orderVariables = new HashMap();
 		HashMap<String, ArrayList<String>> statements = new HashMap();//the key is tid_methodName_noOfExecution_sta
 		//order variable is O_tid_methodName_noOfExecution
@@ -207,7 +236,10 @@ public class SymbolicExecution extends SceneTransformer {
 			tID = threadIt.next();//tID is a String 
 			//differntiate between main and thread class
 			if (tID.equals("1")) { //main thread
+				HashMap<String,HashMap<Integer,ArrayList<Integer>>> mainMethods = table.get("1");
+				Iterator<String> mainSigs = mainMethods.keySet().iterator();
 				String mainSign = new String(); //Signature of main method of main class of main thread
+
 				while(mainSigs.hasNext()) {
 					String sigs = mainSigs.next();
 
@@ -217,53 +249,49 @@ public class SymbolicExecution extends SceneTransformer {
 						break;
 					}
 				}
-				// PatchingChain<Unit> units = Scene.v().getMethod(mainSign).getActiveBody().getUnits();
-				// Iterator<Unit> unitIt = units.iterator();
 				Body mainBody = Scene.v().getMethod(mainSign).getActiveBody();
 				ExceptionalBlockGraph bGraph = new ExceptionalBlockGraph(mainBody);
 				// System.out.println(bGraph.size());
 				Object[] tempObj = bGraph.getBlocks().toArray();
 				Block[] blocks = new Block[1000];
 				if (tempObj[0] instanceof Block) {
-					for (int i = 0; i < bGraph.size(); i++) {
+					for (int i = 0; i < bGraph.size(); i++)
 						blocks[0] = (Block)tempObj[0];
-//						System.out.println();
-					}
 				}
 				Iterator<Integer> ballIDList = table.get(tID).get(mainSign).get(0).iterator();
-				table.get(tID).get(mainSign).put(0, null);
+				table.get(tID).get(mainSign).put(0, getRemovedArrayElement());
 				ArrayList<Integer> blockIDs = new ArrayList(1000);
 				while(ballIDList.hasNext()) {
 					Integer temp = ballIDList.next();
 					ListIterator<Integer> listIt = paths.get(temp).listIterator();
-					while(listIt.hasNext()) {
+					while(listIt.hasNext())
 						blockIDs.add(listIt.next());
-						System.out.println("lim");
-					}
+						// System.out.println("lim");
 				}
 				//if function call happens put things in stack
-				ArrayList<String> temp1 = new ArrayList(3);
-				temp1.add(tID);
-				temp1.add(mainSign);
-				temp1.add("0");
-				functionCallStack.push(temp1);
+				ArrayList<String> entryIndex = new ArrayList(3);
+				entryIndex.add(tID);
+				entryIndex.add(mainSign);
+				entryIndex.add("0");
+				functionCallStack.push(entryIndex);
 				Integer blockID = blockIDs.remove(0);
 				Iterator<Unit> unitIt = blocks[blockID].iterator();
 				blockIDStack.push(blockIDs);
 				unitItStack.push(unitIt);
 
 				//generic code will run using stack
+				outloop:
 				while (!functionCallStack.empty()) {
-					temp1 = functionCallStack.pop();
+					ArrayList<String> temp1 = functionCallStack.pop();
+					// System.out.println
 					blockIDs = blockIDStack.pop();
 					unitIt = unitItStack.pop();
 					while (unitIt.hasNext()) {
 						Unit unit = unitIt.next();
-						//analysis code
-						//function call handle code
-						// System.out.println(unit);
+						
+
+
 						if(unit instanceof InvokeStmt) {
-							// System.out.println(unit);
 							InvokeStmt invokeStmt = (InvokeStmt)unit;
 							if (invokeStmt.toString().contains("PoP_Util")) {
 
@@ -282,14 +310,46 @@ public class SymbolicExecution extends SceneTransformer {
 							}
 							else {
 								//symbolic constraint generation
-								SootMethod clalledMethod = invokeStmt.getInvokeExpr().getMethod();
+								SootMethod calledMethod = invokeStmt.getInvokeExpr().getMethod();
 								int i = 0;
-								while (table.get(tID).get(clalledMethod.getSignature()).get(i) != null) {
+								while (true) {
 									//push necessary entries in the stack
-									i++;
-								}
-								// System.out.println(invokeStmt.getFieldRef().toString());
+									if (table.get(tID).get(calledMethod.getSignature()).get(i) != null) {
+										if (table.get(tID).get(calledMethod.getSignature()).get(i).get(0)
+											 == -1) {
+											i++;
+											continue;
+										}
+									}
+									else {
+											break;
+									}
+									ArrayList<String> temp2 = new ArrayList(3);
+									temp2.add(tID);
+									temp2.add(calledMethod.getSignature());
+									temp2.add(new Integer(i).toString());
+									functionCallStack.push(temp2);
+									blockIDs = getBlockIDList(paths, table.get(tID).
+												get(calledMethod.getSignature()).get(i));
+									blockID = blockIDs.remove(0);
+									unitIt = blocks[blockID].iterator();
+									blockIDStack.push(blockIDs);
+									unitItStack.push(unitIt);
+									table.get(tID).get(calledMethod.getSignature()).
+												put(i, getRemovedArrayElement());
 
+									getBlocks();
+
+
+
+
+
+
+
+
+
+									continue outloop;
+								}
 							}
 						}
 					}
@@ -297,7 +357,7 @@ public class SymbolicExecution extends SceneTransformer {
 						continue;
 					}
 					else {
-						functionCallStack.push(temp1);
+						functionCallStack.push(entryIndex);
 						blockID = blockIDs.remove(0);
 						blockIDStack.push(blockIDs);
 						unitIt = blocks[blockID].iterator();
@@ -306,7 +366,19 @@ public class SymbolicExecution extends SceneTransformer {
 				}
 			}
 			else {//other threads
+				//here run is the main method
+				HashMap<String,HashMap<Integer,ArrayList<Integer>>> mainMethods = table.get(tID);
+				Iterator<String> threadMethodSigns = mainMethods.keySet().iterator();
+				String runMethodSign = new String(); //Signature of run method of thread class of child of main thread
+				while(threadMethodSigns.hasNext()) {
+					String sigs = threadMethodSigns.next();
 
+					if(sigs.contains("void run()")) {
+						runMethodSign = sigs;
+					// System.out.println(mainSign);
+						break;
+					}
+				}
 			}
 		}
 		out.close();
