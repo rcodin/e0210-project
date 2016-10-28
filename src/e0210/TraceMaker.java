@@ -44,51 +44,51 @@ public class TraceMaker {
 		String in = new String(Files.readAllBytes(Paths.get(inPath)));
 
 		/*
-		 * 
-		 * Write your algorithm which does the post-processing of the output
-		 * to construct the tuple for each method call
-		 * 
-		 */
+		//  * 
+		//  * Write your algorithm which does the post-processing of the output
+		//  * to construct the tuple for each method call
+		//  * 
+		//  */
 
-		// Call to the symbolic execution.
-		// You can pass any data that's required for symbolic execution
-		// Example: the tuples for each method call
+		// // Call to the symbolic execution.
+		// // You can pass any data that's required for symbolic execution
+		// // Example: the tuples for each method call
 		sootMainSymbolicExecution(project, testcase);
 
-        /*
-            You should have the intra-thread trace for each thread and the
-            path constraints by now.
-            Assign an order variable of the form O_i_j to the jth trace entry
-            of the ith thread.
-            Use the intra-thread traces to construct read-write constraints,
-            locking constraints, program order constraints, must-happen-before
-            constraints. These constraints will be in terms of the order 
-            variables.
-            Put all these constaints together into one big equation:
-            All_constraints = (Read-write constraints) ^ (Path constraints) ^
-                (Program order constraints) ^ (Must happen before constraints)
-                ^ (Locking constraints)
-            
-        */
         
-        /* Solve the constraints using Z3 solver
-           The solver will provide you a feasible assignment of order variables
-           Using these values, construct your global trace 
-           To construct the global trace, you just need to put the intra-thread
-           trace entries in ascending order of their order variables.
-        */
+  //           You should have the intra-thread trace for each thread and the
+  //           path constraints by now.
+  //           Assign an order variable of the form O_i_j to the jth trace entry
+  //           of the ith thread.
+  //           Use the intra-thread traces to construct read-write constraints,
+  //           locking constraints, program order constraints, must-happen-before
+  //           constraints. These constraints will be in terms of the order 
+  //           variables.
+  //           Put all these constaints together into one big equation:
+  //           All_constraints = (Read-write constraints) ^ (Path constraints) ^
+  //               (Program order constraints) ^ (Must happen before constraints)
+  //               ^ (Locking constraints)
+            
+        
+        
+  //       /* Solve the constraints using Z3 solver
+  //          The solver will provide you a feasible assignment of order variables
+  //          Using these values, construct your global trace 
+  //          To construct the global trace, you just need to put the intra-thread
+  //          trace entries in ascending order of their order variables.
+  //       */
 
-		// Output the global trace 
-		PrintWriter globalTraceWriter = new PrintWriter(globalTraceOutPath);
-		globalTraceWriter.print();
+		// // Output the global trace 
+		// PrintWriter globalTraceWriter = new PrintWriter(globalTraceOutPath);
+		// globalTraceWriter.print();
 
-		globalTraceWriter.close();
+		// globalTraceWriter.close();
 
-		// Output the tuples
-		PrintWriter tupleWriter = new PrintWriter(tupleOutPath);
-		tupleWriter.print();
+		// // Output the tuples
+		// PrintWriter tupleWriter = new PrintWriter(tupleOutPath);
+		// tupleWriter.print();
 
-		tupleWriter.close();
+		// tupleWriter.close();
 
 		return;
 	}
@@ -138,9 +138,9 @@ public class TraceMaker {
 		base_args.add("-output-dir");
 		base_args.add("Testcases/" + project + "/sootBin/");
 
-		SymbolicExecution obj = new SymbolicExecution();
+		SymbolicExecution obj = new SymbolicExecution(project, testcase);
 
-		PackManager.v().getPack("jtp").add(new Transform("jtp.MyAnalysis", obj));
+		PackManager.v().getPack("wjtp").add(new Transform("wjtp.MyAnalysis", obj));
 
 		soot.Main.main(base_args.toArray(new String[base_args.size()]));
 
