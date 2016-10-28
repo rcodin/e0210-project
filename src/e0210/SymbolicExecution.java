@@ -249,33 +249,36 @@ public class SymbolicExecution extends SceneTransformer {
 						break;
 					}
 				}
-				Body mainBody = Scene.v().getMethod(mainSign).getActiveBody();
-				ExceptionalBlockGraph bGraph = new ExceptionalBlockGraph(mainBody);
-				// System.out.println(bGraph.size());
-				Object[] tempObj = bGraph.getBlocks().toArray();
-				Block[] blocks = new Block[1000];
-				if (tempObj[0] instanceof Block) {
-					for (int i = 0; i < bGraph.size(); i++)
-						blocks[0] = (Block)tempObj[0];
-				}
-				Iterator<Integer> ballIDList = table.get(tID).get(mainSign).get(0).iterator();
-				table.get(tID).get(mainSign).put(0, getRemovedArrayElement());
+				// Body mainBody = Scene.v().getMethod(mainSign).getActiveBody();
+				// ExceptionalBlockGraph bGraph = new ExceptionalBlockGraph(mainBody);
+				// // System.out.println(bGraph.size());
+				// Object[] tempObj = bGraph.getBlocks().toArray();
+				// Block[] blocks = new Block[1000];
+				// if (tempObj[0] instanceof Block) {
+				// 	for (int i = 0; i < bGraph.size(); i++)
+				// 		blocks[0] = (Block)tempObj[0];
+				// }
+				ArrayList<Block> mainBlocks = getBlocks(Scene.v().getMethod(mainSign));
 				ArrayList<Integer> blockIDs = new ArrayList(1000);
-				while(ballIDList.hasNext()) {
-					Integer temp = ballIDList.next();
-					ListIterator<Integer> listIt = paths.get(temp).listIterator();
-					while(listIt.hasNext())
-						blockIDs.add(listIt.next());
-						// System.out.println("lim");
-				}
+				blockIDs = getBlockIDList(paths, table.get(tID).get(mainSign).get(0));
+				// Iterator<Integer> ballIDList = table.get(tID).get(mainSign).get(0).iterator();
+				table.get(tID).get(mainSign).put(0, getRemovedArrayElement());
+				// while(ballIDList.hasNext()) {
+				// 	Integer temp = ballIDList.next();
+				// 	ListIterator<Integer> listIt = paths.get(temp).listIterator();
+				// 	while(listIt.hasNext())
+				// 		blockIDs.add(listIt.next());
+				// 		// System.out.println("lim");
+				// }
+				// blockIDs = getBlockIDList(paths, mainBlocks);
 				//if function call happens put things in stack
 				ArrayList<String> entryIndex = new ArrayList(3);
 				entryIndex.add(tID);
 				entryIndex.add(mainSign);
 				entryIndex.add("0");
 				functionCallStack.push(entryIndex);
-				Integer blockID = blockIDs.remove(0);
-				Iterator<Unit> unitIt = blocks[blockID].iterator();
+				Integer temp5 = blockIDs.remove(0);
+				Iterator<Unit> unitIt = mainBlocks.get(temp5).iterator();
 				blockIDStack.push(blockIDs);
 				unitItStack.push(unitIt);
 
@@ -288,9 +291,6 @@ public class SymbolicExecution extends SceneTransformer {
 					unitIt = unitItStack.pop();
 					while (unitIt.hasNext()) {
 						Unit unit = unitIt.next();
-						
-
-
 						if(unit instanceof InvokeStmt) {
 							InvokeStmt invokeStmt = (InvokeStmt)unit;
 							if (invokeStmt.toString().contains("PoP_Util")) {
@@ -311,34 +311,63 @@ public class SymbolicExecution extends SceneTransformer {
 							else {
 								//symbolic constraint generation
 								SootMethod calledMethod = invokeStmt.getInvokeExpr().getMethod();
+								System.out.println(calledMethod.toString());
 								int i = 0;
 								while (true) {
 									//push necessary entries in the stack
 									if (table.get(tID).get(calledMethod.getSignature()).get(i) != null) {
-										if (table.get(tID).get(calledMethod.getSignature()).get(i).get(0)
-											 == -1) {
+										if (table.get(tID).get(calledMethod.getSignature()).get(i).get(0) == -1) {
 											i++;
 											continue;
 										}
 									}
 									else {
+											System.out.println("fucked");
 											break;
 									}
+									i--;//decrement 1 to get the current entry
+
+
+
+
+
+									if (blockIDs.isEmpty()) {
+										continue;
+									}
+									else {
+										functionCallStack.push(temp1);
+										if (!unitIt.hasNext()) {
+											Integer blockID = blockIDs.remove(0);
+											ArrayList<Block> tempBlockList = getBlocks(Scene.v().getMethod(temp1.get(1)));//get blocks for current executing function
+											Iterator<Unit> stmtIt = tempBlockList.get(blockID).iterator();
+											blockIDStack.push(blockIDs);
+											unitItStack.push(stmtIt);
+										}
+										else {
+											blockIDStack.push(blockIDs);
+											unitItStack.push(unitIt);	
+										}
+									}
+
+
+
+
+									//put thr function in stack
 									ArrayList<String> temp2 = new ArrayList(3);
 									temp2.add(tID);
 									temp2.add(calledMethod.getSignature());
 									temp2.add(new Integer(i).toString());
 									functionCallStack.push(temp2);
-									blockIDs = getBlockIDList(paths, table.get(tID).
-												get(calledMethod.getSignature()).get(i));
-									blockID = blockIDs.remove(0);
-									unitIt = blocks[blockID].iterator();
+									blockIDs = getBlockIDList(paths, table.get(tID).get(calledMethod.getSignature()).get(i));
+									Integer blockID = blockIDs.remove(0);
+									ArrayList<Block> blockList = getBlocks(calledMethod);
+									unitIt = blockList.get(blockID).iterator();//fix issue using current methods blocks
 									blockIDStack.push(blockIDs);
 									unitItStack.push(unitIt);
 									table.get(tID).get(calledMethod.getSignature()).
 												put(i, getRemovedArrayElement());
 
-									getBlocks();
+									// getBlocks();
 
 
 
@@ -357,11 +386,13 @@ public class SymbolicExecution extends SceneTransformer {
 						continue;
 					}
 					else {
-						functionCallStack.push(entryIndex);
-						blockID = blockIDs.remove(0);
+						functionCallStack.push(temp1);
+						Integer blockID = blockIDs.remove(0);
 						blockIDStack.push(blockIDs);
-						unitIt = blocks[blockID].iterator();
-						unitItStack.push(unitIt);
+						ArrayList<Block> blockList = getBlocks(Scene.v().getMethod(temp1.get(1)));
+						// unitIt = 
+						Iterator<Unit> stmtIt = blockList.get(blockID).iterator();
+						unitItStack.push(stmtIt);
 					}
 				}
 			}
