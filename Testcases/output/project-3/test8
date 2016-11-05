@@ -1,0 +1,123 @@
+0, Begin
+0, Write, <test8.Main: java.lang.Integer shared_int_a>
+0, Fork, 0.0
+0, Fork, 0.1
+0, Fork, 0.2
+0.0, Begin
+0.0, Lock, <test8.Main: java.util.concurrent.locks.Lock lock>
+0.0, Read, <test8.Main: java.lang.Integer shared_int_a>
+0.0, Read, <test8.Main: java.lang.Integer shared_int_a>
+0.0, Write, <test8.Main: java.lang.Integer shared_int_a>
+0.0, Read, <test8.Main: java.lang.Integer shared_int_a>
+0.0, Unlock, <test8.Main: java.util.concurrent.locks.Lock lock>
+0.0, Fork, 0.0.0
+0.0.0, Begin
+0.0.0, Lock, <test8.Main: java.util.concurrent.locks.Lock lock>
+0.0.0, Read, <test8.Main: java.lang.Integer shared_int_a>
+0.0.0, Read, <test8.Main: java.lang.Integer shared_int_a>
+0.0.0, Write, <test8.Main: java.lang.Integer shared_int_a>
+0.0.0, Read, <test8.Main: java.lang.Integer shared_int_a>
+0.0.0, Unlock, <test8.Main: java.util.concurrent.locks.Lock lock>
+0.0.0, Fork, 0.0.0.0
+0.1, Begin
+0.1, Lock, <test8.Main: java.util.concurrent.locks.Lock lock>
+0.1, Read, <test8.Main: java.lang.Integer shared_int_a>
+0.1, Read, <test8.Main: java.lang.Integer shared_int_a>
+0.1, Write, <test8.Main: java.lang.Integer shared_int_a>
+0.1, Read, <test8.Main: java.lang.Integer shared_int_a>
+0.1, Unlock, <test8.Main: java.util.concurrent.locks.Lock lock>
+0.1, Fork, 0.1.0
+0.1.0, Begin
+0.1.0, Lock, <test8.Main: java.util.concurrent.locks.Lock lock>
+0.1.0, Read, <test8.Main: java.lang.Integer shared_int_a>
+0.1.0, Read, <test8.Main: java.lang.Integer shared_int_a>
+0.1.0, Write, <test8.Main: java.lang.Integer shared_int_a>
+0.1.0, Read, <test8.Main: java.lang.Integer shared_int_a>
+0.1.0, Unlock, <test8.Main: java.util.concurrent.locks.Lock lock>
+0.1.0, Fork, 0.1.0.0
+0.1.0.0, Begin
+0.1.0.0, Lock, <test8.Main: java.util.concurrent.locks.Lock lock>
+0.1.0.0, Read, <test8.Main: java.lang.Integer shared_int_a>
+0.1.0.0, Read, <test8.Main: java.lang.Integer shared_int_a>
+0.1.0.0, Write, <test8.Main: java.lang.Integer shared_int_a>
+0.1.0.0, Read, <test8.Main: java.lang.Integer shared_int_a>
+0.1.0.0, Unlock, <test8.Main: java.util.concurrent.locks.Lock lock>
+0.1.0.0, Fork, 0.1.0.0.0
+0.1.0.0.0, Begin
+0.1.0.0.0, Lock, <test8.Main: java.util.concurrent.locks.Lock lock>
+0.1.0.0.0, Read, <test8.Main: java.lang.Integer shared_int_a>
+0.1.0.0.0, Read, <test8.Main: java.lang.Integer shared_int_a>
+0.1.0.0.0, Write, <test8.Main: java.lang.Integer shared_int_a>
+0.1.0.0.0, Read, <test8.Main: java.lang.Integer shared_int_a>
+0.1.0.0.0, Unlock, <test8.Main: java.util.concurrent.locks.Lock lock>
+0.0.0.0, Begin
+0.0.0.0, Lock, <test8.Main: java.util.concurrent.locks.Lock lock>
+0.0.0.0, Read, <test8.Main: java.lang.Integer shared_int_a>
+0.0.0.0, Read, <test8.Main: java.lang.Integer shared_int_a>
+0.0.0.0, Write, <test8.Main: java.lang.Integer shared_int_a>
+0.0.0.0, Read, <test8.Main: java.lang.Integer shared_int_a>
+0.0.0.0, Unlock, <test8.Main: java.util.concurrent.locks.Lock lock>
+0.2, Begin
+0.2, Lock, <test8.Main: java.util.concurrent.locks.Lock lock>
+0.2, Read, <test8.Main: java.lang.Integer shared_int_a>
+0.2, Read, <test8.Main: java.lang.Integer shared_int_a>
+0.2, Write, <test8.Main: java.lang.Integer shared_int_a>
+0.2, Read, <test8.Main: java.lang.Integer shared_int_a>
+0.2, Unlock, <test8.Main: java.util.concurrent.locks.Lock lock>
+0.0, Lock, <test8.Main: java.util.concurrent.locks.Lock lock>
+0.0, Read, <test8.Main: java.lang.Integer shared_int_a>
+0.0, Read, <test8.Main: java.lang.Integer shared_int_a>
+0.0, Write, <test8.Main: java.lang.Integer shared_int_a>
+0.0, Read, <test8.Main: java.lang.Integer shared_int_a>
+0.0, Unlock, <test8.Main: java.util.concurrent.locks.Lock lock>
+0.0, End
+0.0.0, Lock, <test8.Main: java.util.concurrent.locks.Lock lock>
+0.0.0, Read, <test8.Main: java.lang.Integer shared_int_a>
+0.0.0, Read, <test8.Main: java.lang.Integer shared_int_a>
+0.0.0, Write, <test8.Main: java.lang.Integer shared_int_a>
+0.0.0, Read, <test8.Main: java.lang.Integer shared_int_a>
+0.0.0, Unlock, <test8.Main: java.util.concurrent.locks.Lock lock>
+0.0.0, End
+0.0.0.0, Lock, <test8.Main: java.util.concurrent.locks.Lock lock>
+0.0.0.0, Read, <test8.Main: java.lang.Integer shared_int_a>
+0.0.0.0, Read, <test8.Main: java.lang.Integer shared_int_a>
+0.0.0.0, Write, <test8.Main: java.lang.Integer shared_int_a>
+0.0.0.0, Read, <test8.Main: java.lang.Integer shared_int_a>
+0.0.0.0, Unlock, <test8.Main: java.util.concurrent.locks.Lock lock>
+0.0.0.0, End
+0.1, Lock, <test8.Main: java.util.concurrent.locks.Lock lock>
+0.1, Read, <test8.Main: java.lang.Integer shared_int_a>
+0.1, Read, <test8.Main: java.lang.Integer shared_int_a>
+0.1, Write, <test8.Main: java.lang.Integer shared_int_a>
+0.1, Read, <test8.Main: java.lang.Integer shared_int_a>
+0.1, Unlock, <test8.Main: java.util.concurrent.locks.Lock lock>
+0.1, End
+0.1.0, Lock, <test8.Main: java.util.concurrent.locks.Lock lock>
+0.1.0, Read, <test8.Main: java.lang.Integer shared_int_a>
+0.1.0, Read, <test8.Main: java.lang.Integer shared_int_a>
+0.1.0, Write, <test8.Main: java.lang.Integer shared_int_a>
+0.1.0, Read, <test8.Main: java.lang.Integer shared_int_a>
+0.1.0, Unlock, <test8.Main: java.util.concurrent.locks.Lock lock>
+0.1.0, End
+0.1.0.0, Lock, <test8.Main: java.util.concurrent.locks.Lock lock>
+0.1.0.0, Read, <test8.Main: java.lang.Integer shared_int_a>
+0.1.0.0, Read, <test8.Main: java.lang.Integer shared_int_a>
+0.1.0.0, Write, <test8.Main: java.lang.Integer shared_int_a>
+0.1.0.0, Read, <test8.Main: java.lang.Integer shared_int_a>
+0.1.0.0, Unlock, <test8.Main: java.util.concurrent.locks.Lock lock>
+0.1.0.0, End
+0.1.0.0.0, Lock, <test8.Main: java.util.concurrent.locks.Lock lock>
+0.1.0.0.0, Read, <test8.Main: java.lang.Integer shared_int_a>
+0.1.0.0.0, Read, <test8.Main: java.lang.Integer shared_int_a>
+0.1.0.0.0, Write, <test8.Main: java.lang.Integer shared_int_a>
+0.1.0.0.0, Read, <test8.Main: java.lang.Integer shared_int_a>
+0.1.0.0.0, Unlock, <test8.Main: java.util.concurrent.locks.Lock lock>
+0.1.0.0.0, End
+0.2, Lock, <test8.Main: java.util.concurrent.locks.Lock lock>
+0.2, Read, <test8.Main: java.lang.Integer shared_int_a>
+0.2, Read, <test8.Main: java.lang.Integer shared_int_a>
+0.2, Write, <test8.Main: java.lang.Integer shared_int_a>
+0.2, Read, <test8.Main: java.lang.Integer shared_int_a>
+0.2, Unlock, <test8.Main: java.util.concurrent.locks.Lock lock>
+0.2, End
+0, End

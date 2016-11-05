@@ -1,0 +1,25 @@
+0, Begin
+0, Write, <test1.Main: java.lang.Integer shared_int_a>
+0, Fork, 0.0
+0, Fork, 0.1
+0, Fork, 0.2
+0.2, Begin
+0.2, Lock, <test1.Main: java.util.concurrent.locks.Lock lock>
+0.2, Read, <test1.Main: java.lang.Integer shared_int_a>
+0.2, Write, <test1.Main: java.lang.Integer shared_int_a>
+0.2, Unlock, <test1.Main: java.util.concurrent.locks.Lock lock>
+0.2, End
+0.1, Begin
+0.1, Lock, <test1.Main: java.util.concurrent.locks.Lock lock>
+0.1, Read, <test1.Main: java.lang.Integer shared_int_a>
+0.1, Unlock, <test1.Main: java.util.concurrent.locks.Lock lock>
+0.1, End
+0.0, Begin
+0.0, Lock, <test1.Main: java.util.concurrent.locks.Lock lock>
+0.0, Read, <test1.Main: java.lang.Integer shared_int_a>
+0.0, Unlock, <test1.Main: java.util.concurrent.locks.Lock lock>
+0.0, End
+0, Join, 0.0
+0, Join, 0.1
+0, Join, 0.2
+0, End

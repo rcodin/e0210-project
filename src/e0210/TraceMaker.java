@@ -15,6 +15,8 @@ import java.io.PrintWriter;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.io.BufferedReader;
+import java.io.FileReader;
 
 import soot.PackManager;
 import soot.Transform;
@@ -35,8 +37,8 @@ public class TraceMaker {
 		String inPath = "Testcases/" + project + "/output/" + testcase;
 
         // The output files for global trace and tuples. You'll output the results to these files
-		String globalTraceOutPath = "Testcases/" + project + "/processed-output/" + testcase + "-global-trace";
-		String tupleOutPath = "Testcases/" + project + "/processed-output/" + testcase + "-tuples";
+		String globalTraceOutPath = "Testcases/" + project + "/processed-output/" + testcase + ".global_trace";
+		String tupleOutPath = "Testcases/" + project + "/processed-output/" + testcase + ".tuples";
 
 		System.out.println("Processing " + testcase + " of " + project);
 
@@ -44,51 +46,51 @@ public class TraceMaker {
 		String in = new String(Files.readAllBytes(Paths.get(inPath)));
 
 		/*
-		//  * 
-		//  * Write your algorithm which does the post-processing of the output
-		//  * to construct the tuple for each method call
-		//  * 
-		//  */
+		 * 
+		 * Write your algorithm which does the post-processing of the output
+		 * to construct the tuple for each method call
+		 * 
+		 */
 
-		// // Call to the symbolic execution.
-		// // You can pass any data that's required for symbolic execution
-		// // Example: the tuples for each method call
+		// Call to the symbolic execution.
+		// You can pass any data that's required for symbolic execution
+		// Example: the tuples for each method call
 		sootMainSymbolicExecution(project, testcase);
 
-        
-  //           You should have the intra-thread trace for each thread and the
-  //           path constraints by now.
-  //           Assign an order variable of the form O_i_j to the jth trace entry
-  //           of the ith thread.
-  //           Use the intra-thread traces to construct read-write constraints,
-  //           locking constraints, program order constraints, must-happen-before
-  //           constraints. These constraints will be in terms of the order 
-  //           variables.
-  //           Put all these constaints together into one big equation:
-  //           All_constraints = (Read-write constraints) ^ (Path constraints) ^
-  //               (Program order constraints) ^ (Must happen before constraints)
-  //               ^ (Locking constraints)
+        /*
+            You should have the intra-thread trace for each thread and the
+            path constraints by now.
+            Assign an order variable of the form O_i_j to the jth trace entry
+            of the ith thread.
+            Use the intra-thread traces to construct read-write constraints,
+            locking constraints, program order constraints, must-happen-before
+            constraints. These constraints will be in terms of the order 
+            variables.
+            Put all these constaints together into one big equation:
+            All_constraints = (Read-write constraints) ^ (Path constraints) ^
+                (Program order constraints) ^ (Must happen before constraints)
+                ^ (Locking constraints)
             
+        */
         
-        
-  //       /* Solve the constraints using Z3 solver
-  //          The solver will provide you a feasible assignment of order variables
-  //          Using these values, construct your global trace 
-  //          To construct the global trace, you just need to put the intra-thread
-  //          trace entries in ascending order of their order variables.
-  //       */
+        /* Solve the constraints using Z3 solver
+           The solver will provide you a feasible assignment of order variables
+           Using these values, construct your global trace 
+           To construct the global trace, you just need to put the intra-thread
+           trace entries in ascending order of their order variables.
+        */
 
-		// // Output the global trace 
-		// PrintWriter globalTraceWriter = new PrintWriter(globalTraceOutPath);
-		// globalTraceWriter.print();
+		// Output the global trace 
+		PrintWriter globalTraceWriter = new PrintWriter(globalTraceOutPath);
+		globalTraceWriter.print("");
+      
+		globalTraceWriter.close();
 
-		// globalTraceWriter.close();
+		// Output the tuples
+		PrintWriter tupleWriter = new PrintWriter(tupleOutPath);
+		tupleWriter.print("");
 
-		// // Output the tuples
-		// PrintWriter tupleWriter = new PrintWriter(tupleOutPath);
-		// tupleWriter.print();
-
-		// tupleWriter.close();
+		tupleWriter.close();
 
 		return;
 	}
@@ -113,6 +115,8 @@ public class TraceMaker {
 		base_args.add("jdk.net");
 		base_args.add("-exclude");
 		base_args.add("java.lang");
+		base_args.add("-exclude");
+        base_args.add("jdk.internal.*"); 
 		base_args.add("-no-bodies-for-excluded");
 
 		// Retain variable names from the bytecode
@@ -138,7 +142,7 @@ public class TraceMaker {
 		base_args.add("-output-dir");
 		base_args.add("Testcases/" + project + "/sootBin/");
 
-		SymbolicExecution obj = new SymbolicExecution(project, testcase);
+		SymbolicExecution obj = new SymbolicExecution();
 
 		PackManager.v().getPack("wjtp").add(new Transform("wjtp.MyAnalysis", obj));
 

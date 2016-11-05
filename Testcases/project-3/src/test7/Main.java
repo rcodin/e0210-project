@@ -24,11 +24,13 @@ public class Main {
                 
                 if (shared_int_a%3 == 1)
                 {
+                    PoP_Util.registerEvent (1 + 3*i);
                     System.err.println(Thread.currentThread().getName()+" Increment shared_int_a by 1");
                     shared_int_a += 1;
                 }
                 else
                 {
+                    PoP_Util.registerEvent (2 + 3*i);
                     System.err.println(Thread.currentThread().getName()+" Increment shared_int_a by 2");
                     shared_int_a += 2;
                 }
@@ -41,8 +43,12 @@ public class Main {
 		MyThread t1 = new MyThread();
         MyThread t2 = new MyThread();
 
-        t1.start();
-        t2.start();
+        PoP_Util.registerFork(t1);
+		t1.start();
+		
+		PoP_Util.registerFork(t2);
+		t2.start();
+		
 
         t1.join();
         t2.join();

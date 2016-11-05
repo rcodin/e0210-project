@@ -34,6 +34,7 @@ Hence added fork="true" for all the java task in the file.
 		<pathelement location="lib/soot-nightly-05082016.jar" />
 		<pathelement location="lib/jgrapht-core-0.9.2.jar" />
 		<pathelement location="lib/jgrapht-ext-0.9.2.jar" />
+		<pathelement location="lib/z3/bin/com.microsoft.z3.jar "/>
 	</path>
 
 	<!-- Validate the input arguments -->

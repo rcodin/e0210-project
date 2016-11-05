@@ -25,12 +25,13 @@ public class Main {
         if(shared_int_a <= 2)
         /* Only two threads will be able to enter this */
         { 
-            
+            PoP_Util.registerEvent (1);
             System.err.println(Thread.currentThread().getName()+" Wrote shared_int_a");
             shared_int_a ++;
         }
         else
         {
+            PoP_Util.registerEvent (2);
             System.err.println(Thread.currentThread().getName()+" Couldn't write shared_int_a");
         }
         lock.unlock(); 
@@ -51,10 +52,15 @@ public class Main {
         MyThread t2 = new MyThread();
         MyThread t3 = new MyThread();
 
-        t1.start();
-        t2.start();
-        t3.start();
-
+        PoP_Util.registerFork(t1);
+		t1.start();
+		
+		PoP_Util.registerFork(t2);
+		t2.start();
+		
+		PoP_Util.registerFork(t3);
+		t3.start();
+		
         incrementShared();
         
 		return;
