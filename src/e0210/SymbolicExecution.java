@@ -362,6 +362,8 @@ public class SymbolicExecution extends SceneTransformer {
 							InstanceInvokeExpr invExpr = (InstanceInvokeExpr)invokeStmt.getInvokeExpr();
 							// temporary = invExpr.getBase();
 							// System.out.println(invExpr.getBase());
+							Value local = invExpr.getBase();
+							if ()
 						}
 						else if (invokeStmt.toString().contains("void unlock()")) {
 							InstanceInvokeExpr invExpr = (InstanceInvokeExpr)invokeStmt.getInvokeExpr();
