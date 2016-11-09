@@ -27,6 +27,7 @@ import java.lang.*;
 import soot.util.*;
 import soot.jimple.*;
 import soot.jimple.internal.*;
+import soot.SootClass;
 
 import soot.Body;
 import soot.BodyTransformer;
@@ -222,24 +223,59 @@ public class SymbolicExecution extends SceneTransformer {
 			}
 			table.put(tID,l1Elem);
 		}
-		// System.out.println(table.toString());
-		/*Start traversing through code*/
-		// HashMap<String, String> orderVariables = new HashMap();
+		// System.out.println(Scene.v().toString());
 		HashMap<String, ArrayList<String>> statements = new HashMap();//the key is tid_methodName_noOfExecution_sta
 		//order variable is O_tid_methodName_noOfExecution
 		Stack<ArrayList<String>> functionCallStack = new Stack();//fucntion call stack(each entry tid, method name, no of invocation)
 		Stack<ArrayList<Integer>> blockIDStack = new Stack();//each entry is a list of block IDs left to traverse in a function call
 		Stack<Iterator<Unit>> unitItStack = new Stack();//each entry is iterator will go through Units 
+		/*<tid,<event no, trace entry>>
+		*/
+		HashMap<String, HashMap<Integer, ArrayList<String>>> trace = new HashMap();
+		
+		//Shared field counter		
+		HashMap<SootField, Integer> refCounter = new HashMap();
+
 
 		Iterator<String> threadIt = table.keySet().iterator();
+		Iterator<SootClass> appClassIt = Scene.v().getApplicationClasses().iterator();
+		while (appClassIt.hasNext()) {
+			SootClass sootClass  = appClassIt.next();
+			System.out.println(sootClass.toString());
+			if (sootClass.toString().contains("popUtil.PoP_Util"))
+				continue;
+			Iterator<SootField> fieldIt = sootClass.getFields().iterator();
+			while (fieldIt.hasNext()) {
+				SootField sootField = fieldIt.next();
+				refCounter.put(sootField, 0);
+			}
+		}
+
+
+		// HashMap<String,HashMap<String,HashMap<Integer,ArrayList<Value>>>> localVals = new HashMap();
+		// System.out.println(Scene.v().getMethod("<test14.Main: void <clinit>()>").getActiveBody());
 		while(threadIt.hasNext()) {
+			//<thread_objects, no of threads swawned before this>
+			// Value temporary = null;
+			HashMap<Value,Integer> threadObjs = new HashMap();
+			HashMap<Value,Value> lockLocals = new HashMap();
+
+			int no_of_thread_spawned = 0;
+			int no_of_current_event = 0;
+
 			tID = threadIt.next();//tID is a String 
 			//differntiate between main and thread class
-			if (tID.equals("1")) { //main thread
-				HashMap<String,HashMap<Integer,ArrayList<Integer>>> mainMethods = table.get("1");
-				Iterator<String> mainSigs = mainMethods.keySet().iterator();
-				String mainSign = new String(); //Signature of main method of main class of main thread
+			if (trace.get(tID) == null) {
 
+			}
+			else {
+				
+			}
+			int event_no = 0;
+			HashMap<String,HashMap<Integer,ArrayList<Integer>>> mainMethods = table.get(tID);
+			Iterator<String> mainSigs = mainMethods.keySet().iterator();
+			String mainSign = new String(); //Signature of main method of main class of main thread
+			if (tID.equals("1")) {
 				while(mainSigs.hasNext()) {
 					String sigs = mainSigs.next();
 
@@ -249,168 +285,186 @@ public class SymbolicExecution extends SceneTransformer {
 						break;
 					}
 				}
-				// Body mainBody = Scene.v().getMethod(mainSign).getActiveBody();
-				// ExceptionalBlockGraph bGraph = new ExceptionalBlockGraph(mainBody);
-				// // System.out.println(bGraph.size());
-				// Object[] tempObj = bGraph.getBlocks().toArray();
-				// Block[] blocks = new Block[1000];
-				// if (tempObj[0] instanceof Block) {
-				// 	for (int i = 0; i < bGraph.size(); i++)
-				// 		blocks[0] = (Block)tempObj[0];
-				// }
-				ArrayList<Block> mainBlocks = getBlocks(Scene.v().getMethod(mainSign));
-				ArrayList<Integer> blockIDs = new ArrayList(1000);
-				blockIDs = getBlockIDList(paths, table.get(tID).get(mainSign).get(0));
-				// Iterator<Integer> ballIDList = table.get(tID).get(mainSign).get(0).iterator();
-				table.get(tID).get(mainSign).put(0, getRemovedArrayElement());
-				// while(ballIDList.hasNext()) {
-				// 	Integer temp = ballIDList.next();
-				// 	ListIterator<Integer> listIt = paths.get(temp).listIterator();
-				// 	while(listIt.hasNext())
-				// 		blockIDs.add(listIt.next());
-				// 		// System.out.println("lim");
-				// }
-				// blockIDs = getBlockIDList(paths, mainBlocks);
-				//if function call happens put things in stack
-				ArrayList<String> entryIndex = new ArrayList(3);
-				entryIndex.add(tID);
-				entryIndex.add(mainSign);
-				entryIndex.add("0");
-				functionCallStack.push(entryIndex);
-				Integer temp5 = blockIDs.remove(0);
-				Iterator<Unit> unitIt = mainBlocks.get(temp5).iterator();
-				blockIDStack.push(blockIDs);
-				unitItStack.push(unitIt);
-
-				//generic code will run using stack
-				outloop:
-				while (!functionCallStack.empty()) {
-					ArrayList<String> temp1 = functionCallStack.pop();
-					// System.out.println
-					blockIDs = blockIDStack.pop();
-					unitIt = unitItStack.pop();
-					while (unitIt.hasNext()) {
-						Unit unit = unitIt.next();
-						if(unit instanceof InvokeStmt) {
-							InvokeStmt invokeStmt = (InvokeStmt)unit;
-							if (invokeStmt.toString().contains("PoP_Util")) {
-
-							}
-							else if (invokeStmt.toString().contains("void start()")) {
-
-							}
-							else if (invokeStmt.toString().contains("void join()")) {
-
-							}
-							else if (invokeStmt.toString().contains("void lock()")) {
-
-							}
-							else if (invokeStmt.toString().contains("void unlock()")) {
-
-							}
-							else {
-								//symbolic constraint generation
-								SootMethod calledMethod = invokeStmt.getInvokeExpr().getMethod();
-								System.out.println(calledMethod.toString());
-								int i = 0;
-								while (true) {
-									//push necessary entries in the stack
-									if (table.get(tID).get(calledMethod.getSignature()).get(i) != null) {
-										if (table.get(tID).get(calledMethod.getSignature()).get(i).get(0) == -1) {
-											i++;
-											continue;
-										}
-									}
-									else {
-											System.out.println("fucked");
-											break;
-									}
-									i--;//decrement 1 to get the current entry
-
-
-
-
-
-									if (blockIDs.isEmpty()) {
-										continue;
-									}
-									else {
-										functionCallStack.push(temp1);
-										if (!unitIt.hasNext()) {
-											Integer blockID = blockIDs.remove(0);
-											ArrayList<Block> tempBlockList = getBlocks(Scene.v().getMethod(temp1.get(1)));//get blocks for current executing function
-											Iterator<Unit> stmtIt = tempBlockList.get(blockID).iterator();
-											blockIDStack.push(blockIDs);
-											unitItStack.push(stmtIt);
-										}
-										else {
-											blockIDStack.push(blockIDs);
-											unitItStack.push(unitIt);	
-										}
-									}
-
-
-
-
-									//put thr function in stack
-									ArrayList<String> temp2 = new ArrayList(3);
-									temp2.add(tID);
-									temp2.add(calledMethod.getSignature());
-									temp2.add(new Integer(i).toString());
-									functionCallStack.push(temp2);
-									blockIDs = getBlockIDList(paths, table.get(tID).get(calledMethod.getSignature()).get(i));
-									Integer blockID = blockIDs.remove(0);
-									ArrayList<Block> blockList = getBlocks(calledMethod);
-									unitIt = blockList.get(blockID).iterator();//fix issue using current methods blocks
-									blockIDStack.push(blockIDs);
-									unitItStack.push(unitIt);
-									table.get(tID).get(calledMethod.getSignature()).
-												put(i, getRemovedArrayElement());
-
-									// getBlocks();
-
-
-
-
-
-
-
-
-
-									continue outloop;
-								}
-							}
-						}
-					}
-					if (blockIDs.isEmpty()) {
-						continue;
-					}
-					else {
-						functionCallStack.push(temp1);
-						Integer blockID = blockIDs.remove(0);
-						blockIDStack.push(blockIDs);
-						ArrayList<Block> blockList = getBlocks(Scene.v().getMethod(temp1.get(1)));
-						// unitIt = 
-						Iterator<Unit> stmtIt = blockList.get(blockID).iterator();
-						unitItStack.push(stmtIt);
-					}
-				}
 			}
-			else {//other threads
-				//here run is the main method
-				HashMap<String,HashMap<Integer,ArrayList<Integer>>> mainMethods = table.get(tID);
-				Iterator<String> threadMethodSigns = mainMethods.keySet().iterator();
-				String runMethodSign = new String(); //Signature of run method of thread class of child of main thread
-				while(threadMethodSigns.hasNext()) {
-					String sigs = threadMethodSigns.next();
+			else {
+				while(mainSigs.hasNext()) {
+					String sigs = mainSigs.next();
 
-					if(sigs.contains("void run()")) {
-						runMethodSign = sigs;
+					if(sigs.contains(" void run()")) {
+						mainSign = sigs;
 					// System.out.println(mainSign);
 						break;
 					}
+				}	
+			}
+			ArrayList<Block> mainBlocks = getBlocks(Scene.v().getMethod(mainSign));
+			// System.out.println(Scene.v().getMethod(mainSign).getActiveBody());
+			ArrayList<Integer> blockIDs = new ArrayList(1000);
+			blockIDs = getBlockIDList(paths, table.get(tID).get(mainSign).get(0));
+			table.get(tID).get(mainSign).put(0, getRemovedArrayElement());
+			ArrayList<String> entryIndex = new ArrayList(3);
+			entryIndex.add(tID);
+			entryIndex.add(mainSign);
+			entryIndex.add("0");
+			functionCallStack.push(entryIndex);
+			Integer temp5 = blockIDs.remove(0);
+			Iterator<Unit> unitIt = mainBlocks.get(temp5).iterator();
+			blockIDStack.push(blockIDs);
+			unitItStack.push(unitIt);
+
+			//generic code will run using stack
+			outloop:
+			while (!functionCallStack.empty()) {
+				ArrayList<String> temp1 = functionCallStack.pop();
+				// System.out.println
+				blockIDs = blockIDStack.pop();
+				unitIt = unitItStack.pop();
+				System.out.println(Scene.v().getMethod(temp1.get(1)).getActiveBody());
+				while (unitIt.hasNext()) {
+					Unit unit = unitIt.next();
+
+					// System.out.println(unit.toString());
+					if(unit instanceof InvokeStmt) {
+						InvokeStmt invokeStmt = (InvokeStmt)unit;
+						if (invokeStmt.toString().contains("PoP_Util")) {
+
+						}
+						else if (invokeStmt.toString().contains("void start()")) {
+							ArrayList<String> forkConstraint = new ArrayList(3);
+							InstanceInvokeExpr invExpr = (InstanceInvokeExpr)invokeStmt.getInvokeExpr();
+
+							forkConstraint.add(tID);
+							forkConstraint.add("Fork");
+							String tmp = new String();
+							// System.out.println("Invoke statememt method is : "+invExpr.getBase());
+							tmp = tmp.concat(tID+"."+ String.valueOf(no_of_thread_spawned));
+							threadObjs.put(invExpr.getBase(), no_of_thread_spawned);
+							forkConstraint.add(tmp);
+							// System.out.println(forkConstraint.get(0)+forkConstraint.get(1)+forkConstraint.get(2));
+							no_of_thread_spawned++;
+							no_of_current_event++;
+						}
+						else if (invokeStmt.toString().contains("void join()")) {
+							ArrayList<String> joinConstraint = new ArrayList(3);
+							InstanceInvokeExpr invExpr = (InstanceInvokeExpr)invokeStmt.getInvokeExpr();
+
+							joinConstraint.add(tID);
+							joinConstraint.add("Join");
+							String tmp = new String();
+							// System.out.println("Invoke statememt method is : "+invExpr.getBase());
+							Integer threadNo = threadObjs.get(invExpr.getBase());
+							tmp = tmp.concat(tID+"."+ String.valueOf(threadNo));
+							joinConstraint.add(tmp);
+							// System.out.println(joinConstraint.get(0)+joinConstraint.get(1)+joinConstraint.get(2));
+							no_of_current_event++;
+						}
+						else if (invokeStmt.toString().contains("void lock()")) {
+							InstanceInvokeExpr invExpr = (InstanceInvokeExpr)invokeStmt.getInvokeExpr();
+							// temporary = invExpr.getBase();
+							// System.out.println(invExpr.getBase());
+						}
+						else if (invokeStmt.toString().contains("void unlock()")) {
+							InstanceInvokeExpr invExpr = (InstanceInvokeExpr)invokeStmt.getInvokeExpr();
+							// if (temporary.equivTo(invExpr.getBase()))
+							// 	System.out.println("sdsdsddddddddddddddddddddddddddd");
+							System.out.println(invExpr.getBase());
+						}
+						else if (invokeStmt.getInvokeExpr().getMethod().toString().startsWith("<java")) {
+							// System.out.println("ssdsddddddddddddddddddddddddddddd and stack size is : "+ functionCallStack.size());
+						}
+						else {
+
+							//symbolic constraint generation
+							SootMethod calledMethod = invokeStmt.getInvokeExpr().getMethod();
+							
+							// calledMethod
+							int i = 0;
+							while (true) {
+								// System.out.println("fucke");
+								//push necessary entries in the stack
+								// System.out.println(calledMethod.toString()+" the value of i "+i);
+								if (table.get(tID).get(calledMethod.getSignature()).get(i) != null) {
+									if (table.get(tID).get(calledMethod.getSignature()).get(i).get(0) == -1) {
+										i++;
+										continue;
+									}
+									else {
+										i++;
+										break;
+									}
+								}
+								else {
+										// System.out.println("fucked");
+										break;
+								}	
+							}
+							i--;//decrement 1 to get the current entry
+
+
+							functionCallStack.push(temp1);
+							if ((!unitIt.hasNext())&&blockIDs.isEmpty()) {
+								Integer blockID = blockIDs.remove(0);
+								ArrayList<Block> tempBlockList = getBlocks(Scene.v().getMethod(temp1.get(1)));//get blocks for current executing function
+								Iterator<Unit> stmtIt = tempBlockList.get(blockID).iterator();
+								blockIDStack.push(blockIDs);
+								unitItStack.push(stmtIt);
+							}
+							else {
+								blockIDStack.push(blockIDs);
+								unitItStack.push(unitIt);	
+							}
+
+								//put thr function in stack
+								ArrayList<String> temp2 = new ArrayList(3);
+								temp2.add(tID);
+								temp2.add(calledMethod.getSignature());
+								temp2.add(new Integer(i).toString());
+								functionCallStack.push(temp2);
+								blockIDs = getBlockIDList(paths, table.get(tID).get(calledMethod.getSignature()).get(i));
+								Integer blockID = blockIDs.remove(0);
+								ArrayList<Block> blockList = getBlocks(calledMethod);
+								unitIt = blockList.get(blockID).iterator();//fix issue using current methods blocks
+								blockIDStack.push(blockIDs);
+								unitItStack.push(unitIt);
+								table.get(tID).get(calledMethod.getSignature()).
+											put(i, getRemovedArrayElement());
+								// ArrayList<Integer> ret =  getRemovedArrayElement();
+								// System.out.println("return value of arraylist is : "+ ret.get(0));
+								continue outloop;
+							// }
+						}
+					}
+					else if (unit instanceof AssignStmt) {
+						// System.out.println("AssignStmt");
+						// java.lang.Integer, java.lang.Double, java.lang.Character, java.lang.Boolean, int, double, char and boolean.
+						AssignStmt assign = (AssignStmt)unit;
+						Value leftOp = assign.getLeftOp();
+						Value rightOP = assign.getRightOp();
+						if (rightOP.toString().contains("java.util.concurrent.locks.Lock")) {
+							lockLocals.put(leftOp, rightOP);
+						}
+						// System.out.println("Stmt is "+unit+" Left op is "+assign.getLeftOp().getType()+" Right op is "+assign.getRightOp().getType());
+						if (assign.containsInvokeExpr()) {
+							// System.out.println(assign.getInvokeExpr());
+						}
+					}
+					else if (unit instanceof IfStmt) {
+						// System.out.println("IfStmt");
+					}
+				}
+				if (blockIDs.isEmpty()) {
+					continue;
+				}
+				else {
+					functionCallStack.push(temp1);
+					Integer blockID = blockIDs.remove(0);
+					blockIDStack.push(blockIDs);
+					ArrayList<Block> blockList = getBlocks(Scene.v().getMethod(temp1.get(1)));
+					Iterator<Unit> stmtIt = blockList.get(blockID).iterator();
+					unitItStack.push(stmtIt);
 				}
 			}
+			// }
 		}
 		out.close();
 		

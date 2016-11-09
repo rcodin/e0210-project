@@ -91,6 +91,8 @@ public class Analysis extends BodyTransformer {
 		Iterator unitIt = b.getUnits().snapshotIterator();
 		Stmt stmt;
 
+		// System.out.println(bGraph.toString());
+		System.out.println(b.toString());
 		Local methodeInvokeNumber = Jimple.v().newLocal("methodeInvokeNumber", IntType.v());//the number of time a method is called
 		b.getLocals().add(methodeInvokeNumber);
 		while (unitIt.hasNext()) {
@@ -483,7 +485,6 @@ public class Analysis extends BodyTransformer {
 				e.printStackTrace();
 			}
 		}
-		System.out.println(b.toString());
 		// System.out.println(bGraph.toString());
 		// writer(toPrint);
 		

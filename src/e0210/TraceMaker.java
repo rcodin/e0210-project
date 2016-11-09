@@ -142,7 +142,7 @@ public class TraceMaker {
 		base_args.add("-output-dir");
 		base_args.add("Testcases/" + project + "/sootBin/");
 
-		SymbolicExecution obj = new SymbolicExecution();
+		SymbolicExecution obj = new SymbolicExecution(project, testcase);
 
 		PackManager.v().getPack("wjtp").add(new Transform("wjtp.MyAnalysis", obj));
 
