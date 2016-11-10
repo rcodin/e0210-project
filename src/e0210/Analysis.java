@@ -92,7 +92,7 @@ public class Analysis extends BodyTransformer {
 		Stmt stmt;
 
 		// System.out.println(bGraph.toString());
-		System.out.println(b.toString());
+		// System.out.println(b.toString());
 		Local methodeInvokeNumber = Jimple.v().newLocal("methodeInvokeNumber", IntType.v());//the number of time a method is called
 		b.getLocals().add(methodeInvokeNumber);
 		while (unitIt.hasNext()) {
