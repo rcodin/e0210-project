@@ -403,8 +403,8 @@ public class SymbolicExecution extends SceneTransformer {
 						}
 						else if (invokeStmt.getInvokeExpr().getMethod().toString().startsWith("<java")) {
 							// System.out.println("ssdsddddddddddddddddddddddddddddd and stack size is : "+ functionCallStack.size());
-
 							//Get the valueOf functions
+
 						}
 						else {
 
@@ -490,6 +490,7 @@ public class SymbolicExecution extends SceneTransformer {
 
 							SootMethod calledMethod = invokeExpr.getMethod();
 							if (calledMethod.toString().startsWith("<java")) {
+								System.out.println(calledMethod.toString());
 								continue;
 							}
 							// calledMethod
@@ -668,17 +669,17 @@ public class SymbolicExecution extends SceneTransformer {
 						ConditionExpr condExpr = (ConditionExpr)ifStmt.getCondition();
 						//Path Constraints
 						// System.out.println("IfStmt");
-						System.out.println("Condition : "+ifStmt.getCondition()+"Op1 is : "+condExpr.getOp1()+"Op2 is : "+condExpr.getOp2());
+						// System.out.println("Condition : "+ifStmt.getCondition()+"Op1 is : "+condExpr.getOp1()+"Op2 is : "+condExpr.getOp2());
 						//by default branch is not taken
 						boolean isBranchTaken = true;
 						Integer nextBlockID = blockIDs.get(0);
 						if (nextBlockID == (currBlockID + 1)) {
 							//branch not taken
 							isBranchTaken = false;
-							System.out.println("Branch not taken");
+							// System.out.println("Branch not taken");
 						}
 						else {
-							System.out.println("Branch taken");		
+							// System.out.println("Branch taken");		
 						}
 						if (condExpr instanceof EqExpr) {
 							System.out.println("EqExpr");
