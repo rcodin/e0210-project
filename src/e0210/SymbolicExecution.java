@@ -233,6 +233,7 @@ public class SymbolicExecution extends SceneTransformer {
 		Stack<ArrayList<String>> functionCallStack = new Stack();//fucntion call stack(each entry tid, method name, no of invocation)
 		Stack<ArrayList<Integer>> blockIDStack = new Stack();//each entry is a list of block IDs left to traverse in a function call
 		Stack<Iterator<Unit>> unitItStack = new Stack();//each entry is iterator will go through Units 
+		Stack<Integer> currBlockIDStack = new Stack();
 		/*<tid,<event no, trace entry>>
 		*/
 		HashMap<String, HashMap<Integer, ArrayList<String>>> trace = new HashMap();
@@ -256,7 +257,7 @@ public class SymbolicExecution extends SceneTransformer {
 					continue;
 				readRefCounter.put(sootField.toString(), 0);
 				writeRefCounter.put(sootField.toString(), 0);
-				System.out.println(sootField.toString()+" Type "+sootField.getType());
+				// System.out.println(sootField.toString()+" Type "+sootField.getType());
 			}
 		}
 
@@ -314,7 +315,7 @@ public class SymbolicExecution extends SceneTransformer {
 				}	
 			}
 			ArrayList<Block> mainBlocks = getBlocks(Scene.v().getMethod(mainSign));
-			// System.out.println(Scene.v().getMethod(mainSign).getActiveBody());
+			System.out.println(Scene.v().getMethod(mainSign).getActiveBody());
 			ArrayList<Integer> blockIDs = new ArrayList(1000);
 			blockIDs = getBlockIDList(paths, table.get(tID).get(mainSign).get(0));
 			table.get(tID).get(mainSign).put(0, getRemovedArrayElement());
@@ -325,6 +326,7 @@ public class SymbolicExecution extends SceneTransformer {
 			functionCallStack.push(entryIndex);
 			Integer temp5 = blockIDs.remove(0);
 			Iterator<Unit> unitIt = mainBlocks.get(temp5).iterator();
+			currBlockIDStack.push(temp5);
 			blockIDStack.push(blockIDs);
 			unitItStack.push(unitIt);
 
@@ -335,7 +337,8 @@ public class SymbolicExecution extends SceneTransformer {
 				// System.out.println
 				blockIDs = blockIDStack.pop();
 				unitIt = unitItStack.pop();
-				System.out.println(Scene.v().getMethod(temp1.get(1)).getActiveBody());
+				Integer currBlockID = currBlockIDStack.pop();
+				// System.out.println(Scene.v().getMethod(temp1.get(1)).getActiveBody());
 				while (unitIt.hasNext()) {
 					Unit unit = unitIt.next();
 
@@ -400,6 +403,8 @@ public class SymbolicExecution extends SceneTransformer {
 						}
 						else if (invokeStmt.getInvokeExpr().getMethod().toString().startsWith("<java")) {
 							// System.out.println("ssdsddddddddddddddddddddddddddddd and stack size is : "+ functionCallStack.size());
+
+							//Get the valueOf functions
 						}
 						else {
 
@@ -431,16 +436,18 @@ public class SymbolicExecution extends SceneTransformer {
 
 
 							functionCallStack.push(temp1);
-							if ((!unitIt.hasNext())&&blockIDs.isEmpty()) {
+							if ((!unitIt.hasNext())&&!(blockIDs.isEmpty())) {
 								Integer blockID = blockIDs.remove(0);
 								ArrayList<Block> tempBlockList = getBlocks(Scene.v().getMethod(temp1.get(1)));//get blocks for current executing function
 								Iterator<Unit> stmtIt = tempBlockList.get(blockID).iterator();
 								blockIDStack.push(blockIDs);
 								unitItStack.push(stmtIt);
+								currBlockIDStack.push(blockID);
 							}
 							else {
 								blockIDStack.push(blockIDs);
-								unitItStack.push(unitIt);	
+								unitItStack.push(unitIt);
+								currBlockIDStack.push(currBlockID);
 							}
 
 								//put thr function in stack
@@ -455,6 +462,7 @@ public class SymbolicExecution extends SceneTransformer {
 							unitIt = blockList.get(blockID).iterator();//fix issue using current methods blocks
 							blockIDStack.push(blockIDs);
 							unitItStack.push(unitIt);
+							currBlockIDStack.push(blockID);
 							table.get(tID).get(calledMethod.getSignature()).
 										put(i, getRemovedArrayElement());
 							// ArrayList<Integer> ret =  getRemovedArrayElement();
@@ -467,12 +475,15 @@ public class SymbolicExecution extends SceneTransformer {
 						// System.out.println("AssignStmt");
 						// java.lang.Integer, java.lang.Double, java.lang.Character, java.lang.Boolean, int, double, char and boolean.
 						AssignStmt assign = (AssignStmt)unit;
+						if (assign.toString().contains("PoP_Util")) {
+							continue;
+						}
 						Value leftOp = assign.getLeftOp();
 						Value rightOP = assign.getRightOp();
 						if (rightOP.toString().contains("java.util.concurrent.locks.Lock")) {
 							lockLocals.put(leftOp, rightOP);
 						}
-						System.out.println("Stmt is "+unit+" Left op is "+assign.getLeftOp().getType()+" Right op is "+assign.getRightOp().getType());
+						// System.out.println("Stmt is "+unit+" Left op is "+assign.getLeftOp().getType()+" Right op is "+assign.getRightOp().getType());
 						if (assign.containsInvokeExpr()) {
 							// System.out.println("The invoke expression is : "+assign.getInvokeExpr());
 							InvokeExpr invokeExpr = assign.getInvokeExpr();
@@ -506,16 +517,18 @@ public class SymbolicExecution extends SceneTransformer {
 
 
 							functionCallStack.push(temp1);
-							if ((!unitIt.hasNext())&&blockIDs.isEmpty()) {
+							if ((!unitIt.hasNext())&&!blockIDs.isEmpty()) {
 								Integer blockID = blockIDs.remove(0);
 								ArrayList<Block> tempBlockList = getBlocks(Scene.v().getMethod(temp1.get(1)));//get blocks for current executing function
 								Iterator<Unit> stmtIt = tempBlockList.get(blockID).iterator();
 								blockIDStack.push(blockIDs);
 								unitItStack.push(stmtIt);
+								currBlockIDStack.push(blockID);
 							}
 							else {
 								blockIDStack.push(blockIDs);
-								unitItStack.push(unitIt);	
+								unitItStack.push(unitIt);
+								currBlockIDStack.push(currBlockID);	
 							}
 
 								//put thr function in stack
@@ -530,6 +543,7 @@ public class SymbolicExecution extends SceneTransformer {
 							unitIt = blockList.get(blockID).iterator();//fix issue using current methods blocks
 							blockIDStack.push(blockIDs);
 							unitItStack.push(unitIt);
+							currBlockIDStack.push(blockID);
 							table.get(tID).get(calledMethod.getSignature()).
 										put(i, getRemovedArrayElement());
 							// ArrayList<Integer> ret =  getRemovedArrayElement();
@@ -597,57 +611,125 @@ public class SymbolicExecution extends SceneTransformer {
 								}
 								else if (writeRefCounter.get(leftOp.toString()) != null) {
 									//<tID, Write, var name , ref number, value, type>
-									ArrayList<String> writeConstraints = new ArrayList(6);
+								// 	ArrayList<String> writeConstraints = new ArrayList(6);
 
-									writeRefCounter.put(leftOp.toString(), writeRefCounter.get(leftOp.toString()) + 1);
-									writeConstraints.add(tID);
-									writeConstraints.add("Write");
-									writeConstraints.add(leftOp.toString());
-									writeConstraints.add(writeRefCounter.get(leftOp.toString()).toString());
-									readVal = new String();
-									readVal = readVal.concat("Read_");
-									readVal = readVal.concat(rightOP.toString());
-									readVal = readVal.concat("_");
-									//error 
-									readVal = readVal.concat(locRefCounter.get(rightOP.toString()).toString());
-									writeConstraints.add(readVal);
-									writeConstraints.add(typeStr);
-								}
-								else {
-									if (locRefCounter.get(leftOp.toString()) != null) {
-										//<tID, Write, var name , ref number, value, type>
-										ArrayList<String> writeConstraints = new ArrayList(6);
+								// 	writeRefCounter.put(leftOp.toString(), writeRefCounter.get(leftOp.toString()) + 1);
+								// 	writeConstraints.add(tID);
+								// 	writeConstraints.add("Write");
+								// 	writeConstraints.add(leftOp.toString());
+								// 	writeConstraints.add(writeRefCounter.get(leftOp.toString()).toString());
+								// 	readVal = new String();
+								// 	readVal = readVal.concat("Read_");
+								// 	readVal = readVal.concat(rightOP.toString());
+								// 	readVal = readVal.concat("_");
+								// 	//error 
+								// 	System.out.println("Fucked Stmt is "+unit+" Left op is "+assign.getLeftOp().getType()+" Right op is "+assign.getRightOp().getType());
+								// 	readVal = readVal.concat(locRefCounter.get(rightOP.toString()).toString());
+								// 	writeConstraints.add(readVal);
+								// 	writeConstraints.add(typeStr);
+								// }
+								// else {
+								// 	if (locRefCounter.get(leftOp.toString()) != null) {
+								// 		locRefCounter.put(leftOp.toString(), locRefCounter.get(leftOp.toString()) + 1);
+								// 	}
+								// 	else {
+								// 		locRefCounter.put(leftOp.toString(), 1);
+								// 	}
+								// 		//<tID, Write, var name , ref number, value, type>
+								// 	ArrayList<String> writeConstraints = new ArrayList(6);
 
-										//saves the type at write
-										locVarType.put(leftOp.toString(), typeStr);
-										locRefCounter.put(leftOp.toString(), locRefCounter.get(leftOp.toString()) + 1);
-										writeConstraints.add(tID);
-										writeConstraints.add("Write");
-										writeConstraints.add(leftOp.toString());
-										writeConstraints.add(locRefCounter);
-										readVal = new String();
-										//right operator is a global
-										if (readRefCounter.get(rightOP.toString()) != null) {
-											readVal = readVal.concat("Read_");
-											readVal = readVal.concat(rightOP.toString());
-											readVal = readVal.concat("_" + readRefCounter.get(rightOP.toString()));
-										}
-										else {
-											readVal = readVal.concat("Read_");
-											readVal = readVal.concat(rightOP.toString());
-											readVal = readVal.concat("_" + locRefCounter.get(rightOP.toString()));
-										}
-										writeConstraints.add(readVal);
-									}
-									else {
-
-									}
+								// 	//saves the type at write
+								// 	locVarType.put(leftOp.toString(), typeStr);
+								// 	writeConstraints.add(tID);
+								// 	writeConstraints.add("Write");
+								// 	writeConstraints.add(leftOp.toString());
+								// 	writeConstraints.add(locRefCounter.get(leftOp.toString()).toString());
+								// 	readVal = new String();
+								// 	//right operator is a global
+								// 	if (readRefCounter.get(rightOP.toString()) != null) {
+								// 		readVal = readVal.concat("Read_");
+								// 		readVal = readVal.concat(rightOP.toString());
+								// 		readVal = readVal.concat("_" + readRefCounter.get(rightOP.toString()));
+								// 	}
+								// 	else {
+								// 		readVal = readVal.concat("Read_");
+								// 		readVal = readVal.concat(rightOP.toString());
+								// 		readVal = readVal.concat("_" + locRefCounter.get(rightOP.toString()));
+								// 	}
+								// 	writeConstraints.add(readVal);
+								// 	writeConstraints.add(typeStr);
+									
 								}
 							}
 						}
 					}
 					else if (unit instanceof IfStmt) {
+						IfStmt ifStmt = (IfStmt)unit;
+						ConditionExpr condExpr = (ConditionExpr)ifStmt.getCondition();
+						//Path Constraints
 						// System.out.println("IfStmt");
+						System.out.println("Condition : "+ifStmt.getCondition()+"Op1 is : "+condExpr.getOp1()+"Op2 is : "+condExpr.getOp2());
+						//by default branch is not taken
+						boolean isBranchTaken = true;
+						Integer nextBlockID = blockIDs.get(0);
+						if (nextBlockID == (currBlockID + 1)) {
+							//branch not taken
+							isBranchTaken = false;
+							System.out.println("Branch not taken");
+						}
+						else {
+							System.out.println("Branch taken");		
+						}
+						if (condExpr instanceof EqExpr) {
+							System.out.println("EqExpr");
+							if (isBranchTaken) {
+
+							}
+							else {
+								//flip the condition
+							}
+						}
+						else if (condExpr instanceof GeExpr) {
+							System.out.println("NeExpr");
+							if (isBranchTaken) {
+
+							}
+							else {
+								//flip the condition
+							}
+						}
+						else if (condExpr instanceof GtExpr) {
+							if (isBranchTaken) {
+
+							}
+							else {
+								//flip the condition
+							}
+						}
+						else if (condExpr instanceof LeExpr) {
+							if (isBranchTaken) {
+
+							}
+							else {
+								//flip the condition
+							}				
+						}
+						else if (condExpr instanceof  LtExpr) {
+							if (isBranchTaken) {
+
+							}
+							else {
+								//flip the condition
+							}
+						}
+						else if (condExpr instanceof NeExpr) {
+							if (isBranchTaken) {
+
+							}
+							else {
+								//flip the condition
+							}
+						}
 					}
 				}
 				if (blockIDs.isEmpty()) {
@@ -660,6 +742,7 @@ public class SymbolicExecution extends SceneTransformer {
 					ArrayList<Block> blockList = getBlocks(Scene.v().getMethod(temp1.get(1)));
 					Iterator<Unit> stmtIt = blockList.get(blockID).iterator();
 					unitItStack.push(stmtIt);
+					currBlockIDStack.push(blockID);
 				}
 			}
 			// }
