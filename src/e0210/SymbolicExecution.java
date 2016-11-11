@@ -253,7 +253,9 @@ public class SymbolicExecution extends SceneTransformer {
 			while (fieldIt.hasNext()) {
 				SootField sootField = fieldIt.next();
 				if (!(sootField.getType().toString().equals("java.lang.Integer") || sootField.getType().toString().equals("java.lang.Boolean") || 
-					sootField.getType().toString().equals("java.lang.Double") || sootField.getType().toString().equals("java.lang.Float")))
+					sootField.getType().toString().equals("java.lang.Double") || sootField.getType().toString().equals("java.lang.Float")
+					|| sootField.getType().toString().equals("int") || sootField.getType().toString().equals("boolean")
+					|| sootField.getType().toString().equals("float") || sootField.getType().toString().equals("double")))
 					continue;
 				readRefCounter.put(sootField.toString(), 0);
 				writeRefCounter.put(sootField.toString(), 0);
@@ -480,6 +482,7 @@ public class SymbolicExecution extends SceneTransformer {
 						}
 						Value leftOp = assign.getLeftOp();
 						Value rightOP = assign.getRightOp();
+						String typeStr = leftOp.getType().toString();
 						if (rightOP.toString().contains("java.util.concurrent.locks.Lock")) {
 							lockLocals.put(leftOp, rightOP);
 						}
@@ -490,7 +493,56 @@ public class SymbolicExecution extends SceneTransformer {
 
 							SootMethod calledMethod = invokeExpr.getMethod();
 							if (calledMethod.toString().startsWith("<java")) {
-								System.out.println(calledMethod.toString());
+								if (typeStr.equals("java.lang.Integer")) {
+									if (calledMethod.toString().contains("java.lang.Integer: java.lang.Integer valueOf(int)")) {
+										// System.out.println(calledMethod.toString());
+
+										if (locRefCounter.get(leftOp.toString()) != null)
+											locRefCounter.put(leftOp.toString(), locRefCounter.get(leftOp.toString()) + 1);
+										else
+											locRefCounter.put(leftOp.toString(), 1);
+										locVarType.put(leftOp.toString(), typeStr);
+									}			
+								}
+								else if (typeStr.equals("int")) {
+									if (calledMethod.toString().contains("<java.lang.Integer: int intValue()>")) {
+										if (locRefCounter.get(leftOp.toString()) != null)
+											locRefCounter.put(leftOp.toString(), locRefCounter.get(leftOp.toString()) + 1);
+										else
+											locRefCounter.put(leftOp.toString(), 1);
+										locVarType.put(leftOp.toString(), typeStr);
+									}
+								}
+								else if (typeStr.equals("java.lang.Boolean")) {
+									if (calledMethod.toString().contains("<java.lang.Boolean: java.lang.Boolean valueOf(boolean)>")) {
+										if (locRefCounter.get(leftOp.toString()) != null)
+											locRefCounter.put(leftOp.toString(), locRefCounter.get(leftOp.toString()) + 1);
+										else
+											locRefCounter.put(leftOp.toString(), 1);
+										locVarType.put(leftOp.toString(), typeStr);
+									}
+								}
+								else if (typeStr.equals("boolean")) {
+									if (calledMethod.toString().contains("<java.lang.Boolean: boolean booleanValue()>")) {
+										if (locRefCounter.get(leftOp.toString()) != null)
+											locRefCounter.put(leftOp.toString(), locRefCounter.get(leftOp.toString()) + 1);
+										else
+											locRefCounter.put(leftOp.toString(), 1);
+										locVarType.put(leftOp.toString(), typeStr);
+									}
+								}
+								else if (typeStr.equals("java.lang.Double")) {
+									
+								}
+								else if (typeStr.equals("double")) {
+									
+								}
+								else if (typeStr.equals("java.lang.Float")) {
+									
+								}
+								else if (typeStr.equals("float")) {
+									
+								}
 								continue;
 							}
 							// calledMethod
@@ -552,7 +604,6 @@ public class SymbolicExecution extends SceneTransformer {
 							continue outloop;
 						}
 						else {
-							String typeStr = leftOp.getType().toString();
 							boolean isConstant = false;//flag to specify there is concrete value present in the write side or not
 							if (typeStr.equals("java.lang.Integer") || typeStr.equals("java.lang.Boolean") || 
 								typeStr.equals("java.lang.Double") || typeStr.equals("java.lang.Float") || 
@@ -575,14 +626,29 @@ public class SymbolicExecution extends SceneTransformer {
 								}
 								else {
 									if (rightOP instanceof Constant) {
+										//<tID, Write, var name , ref number, value, type, Constant/Variable>
+										ArrayList<String> writeConstraints = new ArrayList(7);
+										
+										writeConstraints.add(tID);
+										writeConstraints.add("Write");
+										writeConstraints.add(leftOp.toString());
 										isConstant = true;
-										System.out.println("constant");
+										// System.out.println("constant");
 										//add directly to z3
 										if (typeStr.equals("java.lang.Integer")) {
-											
+											if (writeRefCounter.get(leftOp.toString()) != null) {
+												// writeConstraints.add(3, );
+											}
 										}
 										else if (typeStr.equals("int")) {
-											
+											IntConstant intConst = (IntConstant)rightOP; 
+											if (writeRefCounter.get(leftOp.toString()) != null) {
+												writeConstraints.add(writeRefCounter.get(leftOp.toString()).toString());
+												writeConstraints.add(intConst.toString());
+												writeConstraints.add(typeStr);
+												writeConstraints.add("Constant");
+											}
+											System.out.println(intConst.toString());
 										}
 										else if (typeStr.equals("java.lang.Boolean")) {
 											
@@ -611,55 +677,56 @@ public class SymbolicExecution extends SceneTransformer {
 
 								}
 								else if (writeRefCounter.get(leftOp.toString()) != null) {
-									//<tID, Write, var name , ref number, value, type>
-								// 	ArrayList<String> writeConstraints = new ArrayList(6);
+									//<tID, Write, var name , ref number, value, type, Constant/Variable>
+									ArrayList<String> writeConstraints = new ArrayList(7);
 
-								// 	writeRefCounter.put(leftOp.toString(), writeRefCounter.get(leftOp.toString()) + 1);
-								// 	writeConstraints.add(tID);
-								// 	writeConstraints.add("Write");
-								// 	writeConstraints.add(leftOp.toString());
-								// 	writeConstraints.add(writeRefCounter.get(leftOp.toString()).toString());
-								// 	readVal = new String();
-								// 	readVal = readVal.concat("Read_");
-								// 	readVal = readVal.concat(rightOP.toString());
-								// 	readVal = readVal.concat("_");
-								// 	//error 
-								// 	System.out.println("Fucked Stmt is "+unit+" Left op is "+assign.getLeftOp().getType()+" Right op is "+assign.getRightOp().getType());
-								// 	readVal = readVal.concat(locRefCounter.get(rightOP.toString()).toString());
-								// 	writeConstraints.add(readVal);
-								// 	writeConstraints.add(typeStr);
-								// }
-								// else {
-								// 	if (locRefCounter.get(leftOp.toString()) != null) {
-								// 		locRefCounter.put(leftOp.toString(), locRefCounter.get(leftOp.toString()) + 1);
-								// 	}
-								// 	else {
-								// 		locRefCounter.put(leftOp.toString(), 1);
-								// 	}
-								// 		//<tID, Write, var name , ref number, value, type>
-								// 	ArrayList<String> writeConstraints = new ArrayList(6);
+									writeRefCounter.put(leftOp.toString(), writeRefCounter.get(leftOp.toString()) + 1);
+									writeConstraints.add(tID);
+									writeConstraints.add("Write");
+									writeConstraints.add(leftOp.toString());
+									writeConstraints.add(writeRefCounter.get(leftOp.toString()).toString());
+									readVal = new String();
+									readVal = readVal.concat("Read_");
+									readVal = readVal.concat(rightOP.toString());
+									readVal = readVal.concat("_");
+									//error 
+									System.out.println("Fucked Stmt is "+unit+" Left op is "+assign.getLeftOp().getType()+" Right op is "+assign.getRightOp().getType());
+									readVal = readVal.concat(locRefCounter.get(rightOP.toString()).toString());
+									writeConstraints.add(readVal);
+									writeConstraints.add(typeStr);
+									writeConstraints.add("Variable");
+								}
+								else {
+									if (locRefCounter.get(leftOp.toString()) != null) {
+										locRefCounter.put(leftOp.toString(), locRefCounter.get(leftOp.toString()) + 1);
+									}
+									else {
+										locRefCounter.put(leftOp.toString(), 1);
+									}
+										//<tID, Write, var name , ref number, value, type, Constant/variable>
+									ArrayList<String> writeConstraints = new ArrayList(7);
 
-								// 	//saves the type at write
-								// 	locVarType.put(leftOp.toString(), typeStr);
-								// 	writeConstraints.add(tID);
-								// 	writeConstraints.add("Write");
-								// 	writeConstraints.add(leftOp.toString());
-								// 	writeConstraints.add(locRefCounter.get(leftOp.toString()).toString());
-								// 	readVal = new String();
-								// 	//right operator is a global
-								// 	if (readRefCounter.get(rightOP.toString()) != null) {
-								// 		readVal = readVal.concat("Read_");
-								// 		readVal = readVal.concat(rightOP.toString());
-								// 		readVal = readVal.concat("_" + readRefCounter.get(rightOP.toString()));
-								// 	}
-								// 	else {
-								// 		readVal = readVal.concat("Read_");
-								// 		readVal = readVal.concat(rightOP.toString());
-								// 		readVal = readVal.concat("_" + locRefCounter.get(rightOP.toString()));
-								// 	}
-								// 	writeConstraints.add(readVal);
-								// 	writeConstraints.add(typeStr);
-									
+									//saves the type at write
+									locVarType.put(leftOp.toString(), typeStr);
+									writeConstraints.add(tID);
+									writeConstraints.add("Write");
+									writeConstraints.add(leftOp.toString());
+									writeConstraints.add(locRefCounter.get(leftOp.toString()).toString());
+									readVal = new String();
+									//right operator is a global
+									if (readRefCounter.get(rightOP.toString()) != null) {
+										readVal = readVal.concat("Read_");
+										readVal = readVal.concat(rightOP.toString());
+										readVal = readVal.concat("_" + readRefCounter.get(rightOP.toString()));
+									}
+									else {
+										readVal = readVal.concat("Read_");
+										readVal = readVal.concat(rightOP.toString());
+										readVal = readVal.concat("_" + locRefCounter.get(rightOP.toString()));
+									}
+									writeConstraints.add(readVal);
+									writeConstraints.add(typeStr);
+									writeConstraints.add("Variable");									
 								}
 							}
 						}
