@@ -266,9 +266,9 @@ public class SymbolicExecution extends SceneTransformer {
 
 		/*Local variable reference count
 		<var name, curr count>
-		saves the type of local variables
+		saves the type of local variables at only write
 		*/
-		HashMap<String, Integer> locRefCount = new HashMap();
+		HashMap<String, Integer> locRefCounter = new HashMap();
 		HashMap<String, String> locVarType = new HashMap();
 		while(threadIt.hasNext()) {
 			//<thread_objects, no of threads swawned before this>
@@ -554,7 +554,7 @@ public class SymbolicExecution extends SceneTransformer {
 									ArrayList<String> readConstraints = new ArrayList(5);
 									readConstraints.add(tID);
 									readConstraints.add("Read");
-									readConstraints.add(readVal);
+									readConstraints.add(rightOP.toString());
 									readConstraints.add(readRefCounter.get(rightOP.toString()).toString());
 									readConstraints.add(typeStr);
 								}
@@ -596,20 +596,52 @@ public class SymbolicExecution extends SceneTransformer {
 
 								}
 								else if (writeRefCounter.get(leftOp.toString()) != null) {
-									writeRefCounter.put(rightOP.toString(), readRefCounter.get(rightOP.toString()) + 1);
-									ArrayList<String> writeConstraints = new ArrayList(5);
+									//<tID, Write, var name , ref number, value, type>
+									ArrayList<String> writeConstraints = new ArrayList(6);
+
+									writeRefCounter.put(leftOp.toString(), writeRefCounter.get(leftOp.toString()) + 1);
 									writeConstraints.add(tID);
 									writeConstraints.add("Write");
+									writeConstraints.add(leftOp.toString());
+									writeConstraints.add(writeRefCounter.get(leftOp.toString()).toString());
 									readVal = new String();
 									readVal = readVal.concat("Read_");
-									readVal = readVal.concat(rightOP.toString()));
-									locRefCount.get(rightOP.toString()).toString()
-									writeConstraints.add();
-									writeConstraints.add(writeRefCounter.get(rightOP.toString()).toString());
+									readVal = readVal.concat(rightOP.toString());
+									readVal = readVal.concat("_");
+									//error 
+									readVal = readVal.concat(locRefCounter.get(rightOP.toString()).toString());
+									writeConstraints.add(readVal);
 									writeConstraints.add(typeStr);
 								}
 								else {
+									if (locRefCounter.get(leftOp.toString()) != null) {
+										//<tID, Write, var name , ref number, value, type>
+										ArrayList<String> writeConstraints = new ArrayList(6);
 
+										//saves the type at write
+										locVarType.put(leftOp.toString(), typeStr);
+										locRefCounter.put(leftOp.toString(), locRefCounter.get(leftOp.toString()) + 1);
+										writeConstraints.add(tID);
+										writeConstraints.add("Write");
+										writeConstraints.add(leftOp.toString());
+										writeConstraints.add(locRefCounter);
+										readVal = new String();
+										//right operator is a global
+										if (readRefCounter.get(rightOP.toString()) != null) {
+											readVal = readVal.concat("Read_");
+											readVal = readVal.concat(rightOP.toString());
+											readVal = readVal.concat("_" + readRefCounter.get(rightOP.toString()));
+										}
+										else {
+											readVal = readVal.concat("Read_");
+											readVal = readVal.concat(rightOP.toString());
+											readVal = readVal.concat("_" + locRefCounter.get(rightOP.toString()));
+										}
+										writeConstraints.add(readVal);
+									}
+									else {
+
+									}
 								}
 							}
 						}
