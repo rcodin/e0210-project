@@ -51,6 +51,10 @@ import java.nio.file.StandardOpenOption;
 
 import com.microsoft.z3.Context;
 import com.microsoft.z3.Solver;
+import com.microsoft.z3.IntExpr;
+import com.microsoft.z3.IntNum;
+import com.microsoft.z3.BoolExpr;
+import com.microsoft.z3.Model;
 
 public class SymbolicExecution extends SceneTransformer {
 	String project;
@@ -62,6 +66,7 @@ public class SymbolicExecution extends SceneTransformer {
 	/*helper function
 	gets block ID list of execeptional block graph from ball ID list
 	*/
+
 	ArrayList<Integer> getBlockIDList(HashMap<Integer,LinkedList<Integer>> paths, ArrayList<Integer> ballIDs) {
 		ArrayList<Integer> ret = new ArrayList(1000);
 		Iterator<Integer> ballIDIt = ballIDs.iterator();
@@ -105,6 +110,22 @@ public class SymbolicExecution extends SceneTransformer {
 		String metaData = new String();
 		String methodSigs = new String();
 		PrintWriter out = null;
+
+		HashMap<String, String>	config = new HashMap<String, String>();
+		config.put("model", "true");
+		Context ctx = new Context(config);
+		Solver solver = ctx.mkSolver();
+
+		
+		IntExpr intExpr = ctx.mkIntConst("a");
+		IntNum intNum = ctx.mkInt("5");
+		BoolExpr boolExpr = ctx.mkEq(intExpr, intNum);
+		solver.add(boolExpr);
+		solver.check();
+		Model model = solver.getModel();
+	 	IntExpr val = (IntExpr)model.eval(intExpr, true);
+	 	String intVal = val.toString();
+	 	// System.out.println(intVal);
 		try {
 		// Read the contents of the output file into a string
 			in = new String(Files.readAllBytes(Paths.get(inPath)));
@@ -236,7 +257,6 @@ public class SymbolicExecution extends SceneTransformer {
 		Stack<Integer> currBlockIDStack = new Stack();
 		/*<tid,<event no, trace entry>>
 		*/
-		HashMap<String, HashMap<Integer, ArrayList<String>>> trace = new HashMap();
 		
 		//Shared variable counter		
 		HashMap<String, Integer> readRefCounter = new HashMap();
@@ -273,24 +293,25 @@ public class SymbolicExecution extends SceneTransformer {
 		*/
 		HashMap<String, Integer> locRefCounter = new HashMap();
 		HashMap<String, String> locVarType = new HashMap();
+		HashMap<String, HashMap<Integer, ArrayList<String>>> trace = new HashMap();
+		HashMap<Integer,ArrayList<String>> currThreadEvents = new HashMap();
 		while(threadIt.hasNext()) {
+			tID = threadIt.next();
+			Integer event_no = 0;
+			
+			ArrayList<String> beginEvent = new ArrayList(2);
+			beginEvent.add(tID);
+			beginEvent.add("Begin");
+			event_no++;
+			// System.out.println("Begin event : "+"O_"+tID+"_"+event_no+" "+beginEvent.get(0)+", "+beginEvent.get(1));
+			currThreadEvents.put(event_no, beginEvent);
 			//<thread_objects, no of threads swawned before this>
 			// Value temporary = null;
 			HashMap<Value,Integer> threadObjs = new HashMap();
 			HashMap<Value,Value> lockLocals = new HashMap();
-
 			int no_of_thread_spawned = 0;
 			int no_of_current_event = 0;
 
-			tID = threadIt.next();//tID is a String 
-			//differntiate between main and thread class
-			if (trace.get(tID) == null) {
-
-			}
-			else {
-				
-			}
-			int event_no = 0;
 			HashMap<String,HashMap<Integer,ArrayList<Integer>>> mainMethods = table.get(tID);
 			Iterator<String> mainSigs = mainMethods.keySet().iterator();
 			String mainSign = new String(); //Signature of main method of main class of main thread
@@ -317,7 +338,7 @@ public class SymbolicExecution extends SceneTransformer {
 				}	
 			}
 			ArrayList<Block> mainBlocks = getBlocks(Scene.v().getMethod(mainSign));
-			System.out.println(Scene.v().getMethod(mainSign).getActiveBody());
+			// System.out.println(Scene.v().getMethod(mainSign).getActiveBody());
 			ArrayList<Integer> blockIDs = new ArrayList(1000);
 			blockIDs = getBlockIDList(paths, table.get(tID).get(mainSign).get(0));
 			table.get(tID).get(mainSign).put(0, getRemovedArrayElement());
@@ -331,7 +352,7 @@ public class SymbolicExecution extends SceneTransformer {
 			currBlockIDStack.push(temp5);
 			blockIDStack.push(blockIDs);
 			unitItStack.push(unitIt);
-
+			
 			//generic code will run using stack
 			outloop:
 			while (!functionCallStack.empty()) {
@@ -351,33 +372,37 @@ public class SymbolicExecution extends SceneTransformer {
 
 						}
 						else if (invokeStmt.toString().contains("void start()")) {
-							ArrayList<String> forkConstraint = new ArrayList(3);
+							ArrayList<String> forkEvent = new ArrayList(3);
 							InstanceInvokeExpr invExpr = (InstanceInvokeExpr)invokeStmt.getInvokeExpr();
 
-							forkConstraint.add(tID);
-							forkConstraint.add("Fork");
+							forkEvent.add(tID);
+							forkEvent.add("Fork");
 							String tmp = new String();
 							// System.out.println("Invoke statememt method is : "+invExpr.getBase());
 							tmp = tmp.concat(tID+"."+ String.valueOf(no_of_thread_spawned));
 							threadObjs.put(invExpr.getBase(), no_of_thread_spawned);
-							forkConstraint.add(tmp);
+							forkEvent.add(tmp);
 							// System.out.println(forkConstraint.get(0)+forkConstraint.get(1)+forkConstraint.get(2));
 							no_of_thread_spawned++;
-							no_of_current_event++;
+							event_no++;
+							currThreadEvents.put(event_no, forkEvent);
+							// System.out.println("Fork event : "+"O_"+tID+"_"+event_no+" "+forkEvent.get(0)+", "+forkEvent.get(1)+", "+forkEvent.get(2));
 						}
 						else if (invokeStmt.toString().contains("void join()")) {
-							ArrayList<String> joinConstraint = new ArrayList(3);
+							ArrayList<String> joinEvent = new ArrayList(3);
 							InstanceInvokeExpr invExpr = (InstanceInvokeExpr)invokeStmt.getInvokeExpr();
 
-							joinConstraint.add(tID);
-							joinConstraint.add("Join");
+							joinEvent.add(tID);
+							joinEvent.add("Join");
 							String tmp = new String();
 							// System.out.println("Invoke statememt method is : "+invExpr.getBase());
 							Integer threadNo = threadObjs.get(invExpr.getBase());
 							tmp = tmp.concat(tID+"."+ String.valueOf(threadNo));
-							joinConstraint.add(tmp);
-							// System.out.println(joinConstraint.get(0)+joinConstraint.get(1)+joinConstraint.get(2));
-							no_of_current_event++;
+							joinEvent.add(tmp);
+							event_no++;
+							currThreadEvents.put(event_no, joinEvent);
+							// System.out.println("Join event : "+"O_"+tID+"_"+event_no+" "+joinEvent.get(0)+", "+joinEvent.get(1)+", "+joinEvent.get(2));	
+							// System.out.println(joinEvent.get(0)+joinEvent.get(1)+joinEvent.get(2));
 						}
 						else if (invokeStmt.toString().contains("void lock()")) {
 							InstanceInvokeExpr invExpr = (InstanceInvokeExpr)invokeStmt.getInvokeExpr();
@@ -385,10 +410,14 @@ public class SymbolicExecution extends SceneTransformer {
 							// System.out.println(invExpr.getBase());
 							Value local = invExpr.getBase();
 							if (lockLocals.get(local) != null) {
-								ArrayList<String> lockConstraint = new ArrayList(3);
-								lockConstraint.add(tID);
-								lockConstraint.add("Lock");
-								lockConstraint.add(lockLocals.get(local).toString());
+								//<tid, Lock, Lock Object>
+								ArrayList<String> lockEvents = new ArrayList(3);
+								lockEvents.add(tID);
+								lockEvents.add("Lock");
+								lockEvents.add(lockLocals.get(local).toString());
+								event_no++;
+								currThreadEvents.put(event_no, lockEvents);
+								// System.out.println("Lock event : "+"O_"+tID+"_"+event_no+" "+lockEvents.get(0)+", "+lockEvents.get(1)+", "+lockEvents.get(2));	
 							}
 						}
 						else if (invokeStmt.toString().contains("void unlock()")) {
@@ -397,15 +426,19 @@ public class SymbolicExecution extends SceneTransformer {
 							// System.out.println(invExpr.getBase());
 							Value local = invExpr.getBase();
 							if (lockLocals.get(local) != null) {
-								ArrayList<String> unLockConstraint = new ArrayList(3);
-								unLockConstraint.add(tID);
-								unLockConstraint.add("Unlock");
-								unLockConstraint.add(lockLocals.get(local).toString());
+								ArrayList<String> unLockEvents = new ArrayList(3);
+								unLockEvents.add(tID);
+								unLockEvents.add("Unlock");
+								unLockEvents.add(lockLocals.get(local).toString());
+								event_no++;
+								currThreadEvents.put(event_no, unLockEvents);
+								// System.out.println("Unlock event : "+"O_"+tID+"_"+event_no+" "+unLockEvents.get(0)+", "+unLockEvents.get(1)+", "+unLockEvents.get(2));	
 							}
 						}
 						else if (invokeStmt.getInvokeExpr().getMethod().toString().startsWith("<java")) {
 							// System.out.println("ssdsddddddddddddddddddddddddddddd and stack size is : "+ functionCallStack.size());
 							//Get the valueOf functions
+							// System.out.println("Function name is : "+invokeStmt.getInvokeExpr().getMethod().toString());
 
 						}
 						else {
@@ -488,25 +521,69 @@ public class SymbolicExecution extends SceneTransformer {
 						}
 						// System.out.println("Stmt is "+unit+" Left op is "+assign.getLeftOp().getType()+" Right op is "+assign.getRightOp().getType());
 						if (assign.containsInvokeExpr()) {
-							// System.out.println("The invoke expression is : "+assign.getInvokeExpr());
+							System.out.println("The invoke expression is : "+assign.toString());
 							InvokeExpr invokeExpr = assign.getInvokeExpr();
 
 							SootMethod calledMethod = invokeExpr.getMethod();
 							if (calledMethod.toString().startsWith("<java")) {
+								//<tID, Write, var name , ref number, value, type, Constant/Variable>
+								ArrayList<String> writeEvents = new ArrayList(7);
+								
+								writeEvents.add(tID);
+								writeEvents.add("Write");
+								writeEvents.add(leftOp.toString());
 								if (typeStr.equals("java.lang.Integer")) {
 									if (calledMethod.toString().contains("java.lang.Integer: java.lang.Integer valueOf(int)")) {
-										// System.out.println(calledMethod.toString());
+										if (invokeExpr.getArg(0) instanceof IntConstant) {	
+											IntConstant intConst = (IntConstant)invokeExpr.getArg(0);
+											// System.out.println(assign.toString()+invokeExpr.getArg(0));
+											int value = intConst.value;
 
-										if (locRefCounter.get(leftOp.toString()) != null)
-											locRefCounter.put(leftOp.toString(), locRefCounter.get(leftOp.toString()) + 1);
-										else
-											locRefCounter.put(leftOp.toString(), 1);
-										locVarType.put(leftOp.toString(), typeStr);
+											if (writeRefCounter.get(leftOp.toString()) != null) {
+												writeRefCounter.put(leftOp.toString(), writeRefCounter.get(leftOp.toString()) + 1);
+												writeEvents.add(writeRefCounter.get(leftOp.toString()).toString());
+												Integer temp = (Integer)value;
+												writeEvents.add(temp.toString());
+												writeEvents.add("java.lang.Integer");
+												writeEvents.add("Constant");
+												event_no++;
+												currThreadEvents.put(event_no, writeEvents);
+												// System.out.println("O_"+tID+"_"+event_no+" "+writeEvents.get(0)+", "+writeEvents.get(1)+", "+
+															// writeEvents.get(2)+", "+writeEvents.get(3)+", "+writeEvents.get(4)+", "+writeEvents.get(5)
+															// +", "+writeEvents.get(6));
+											}
+											//put it directly in z3
+											else if (locRefCounter.get(leftOp.toString()) != null)
+												locRefCounter.put(leftOp.toString(), locRefCounter.get(leftOp.toString()) + 1);
+											else
+												locRefCounter.put(leftOp.toString(), 1);
+											locVarType.put(leftOp.toString(), typeStr);
+										}
+										else 
 									}			
 								}
 								else if (typeStr.equals("int")) {
+									InstanceInvokeExpr instInvokeExpr = (InstanceInvokeExpr)assign.getInvokeExpr();
+									Value calledObj = instInvokeExpr.getBase();
+									// System.out.println(calledObj);
 									if (calledMethod.toString().contains("<java.lang.Integer: int intValue()>")) {
-										if (locRefCounter.get(leftOp.toString()) != null)
+										if (writeRefCounter.get(leftOp.toString()) != null) {
+											writeRefCounter.put(leftOp.toString(), writeRefCounter.get(leftOp.toString()) + 1);
+											writeEvents.add(writeRefCounter.get(leftOp.toString()).toString());
+											String readVal = new String();
+											readVal = readVal.concat("Read_");
+											readVal = readVal.concat(calledObj.toString());
+											readVal = readVal.concat("_"+locRefCounter.get(calledObj.toString()));
+											// writeEvents.add(temp.toString());
+											writeEvents.add("int");
+											writeEvents.add("Variable");
+											event_no++;
+											currThreadEvents.put(event_no, writeEvents);
+											// System.out.println("O_"+tID+"_"+event_no+" "+writeEvents.get(0)+", "+writeEvents.get(1)+", "+
+														// writeEvents.get(2)+", "+writeEvents.get(3)+", "+writeEvents.get(4)+", "+writeEvents.get(5)
+														// +", "+writeEvents.get(6));
+										}
+										else if (locRefCounter.get(leftOp.toString()) != null)
 											locRefCounter.put(leftOp.toString(), locRefCounter.get(leftOp.toString()) + 1);
 										else
 											locRefCounter.put(leftOp.toString(), 1);
@@ -515,7 +592,24 @@ public class SymbolicExecution extends SceneTransformer {
 								}
 								else if (typeStr.equals("java.lang.Boolean")) {
 									if (calledMethod.toString().contains("<java.lang.Boolean: java.lang.Boolean valueOf(boolean)>")) {
-										if (locRefCounter.get(leftOp.toString()) != null)
+										IntConstant intConst = (IntConstant)invokeExpr.getArg(0);
+										// System.out.println(assign.toString()+invokeExpr.getArg(0));
+										int value = intConst.value;
+
+										if (writeRefCounter.get(leftOp.toString()) != null) {
+											writeRefCounter.put(leftOp.toString(), writeRefCounter.get(leftOp.toString()) + 1);
+											writeEvents.add(writeRefCounter.get(leftOp.toString()).toString());
+											Integer temp = (Integer)value;
+											writeEvents.add(temp.toString());
+											writeEvents.add("java.lang.Boolean");
+											writeEvents.add("Constant");
+											event_no++;
+											currThreadEvents.put(event_no, writeEvents);
+											// System.out.println("O_"+tID+"_"+event_no+" "+writeEvents.get(0)+", "+writeEvents.get(1)+", "+
+														// writeEvents.get(2)+", "+writeEvents.get(3)+", "+writeEvents.get(4)+", "+writeEvents.get(5)
+														// +", "+writeEvents.get(6));
+										}
+										else if (locRefCounter.get(leftOp.toString()) != null)
 											locRefCounter.put(leftOp.toString(), locRefCounter.get(leftOp.toString()) + 1);
 										else
 											locRefCounter.put(leftOp.toString(), 1);
@@ -523,8 +617,28 @@ public class SymbolicExecution extends SceneTransformer {
 									}
 								}
 								else if (typeStr.equals("boolean")) {
+									InstanceInvokeExpr instInvokeExpr = (InstanceInvokeExpr)assign.getInvokeExpr();
+									Value calledObj = instInvokeExpr.getBase();
+									// System.out.println(calledObj);
+
 									if (calledMethod.toString().contains("<java.lang.Boolean: boolean booleanValue()>")) {
-										if (locRefCounter.get(leftOp.toString()) != null)
+										if (writeRefCounter.get(leftOp.toString()) != null) {
+											writeRefCounter.put(leftOp.toString(), writeRefCounter.get(leftOp.toString()) + 1);
+											writeEvents.add(writeRefCounter.get(leftOp.toString()).toString());
+											String readVal = new String();
+											readVal = readVal.concat("Read_");
+											readVal = readVal.concat(calledObj.toString());
+											readVal = readVal.concat("_"+locRefCounter.get(calledObj.toString()));
+											// writeEvents.add(temp.toString());
+											writeEvents.add("int");
+											writeEvents.add("Variable");
+											event_no++;
+											currThreadEvents.put(event_no, writeEvents);
+											// System.out.println("O_"+tID+"_"+event_no+" "+writeEvents.get(0)+", "+writeEvents.get(1)+", "+
+														// writeEvents.get(2)+", "+writeEvents.get(3)+", "+writeEvents.get(4)+", "+writeEvents.get(5)
+														// +", "+writeEvents.get(6));
+										}
+										else if (locRefCounter.get(leftOp.toString()) != null)
 											locRefCounter.put(leftOp.toString(), locRefCounter.get(leftOp.toString()) + 1);
 										else
 											locRefCounter.put(leftOp.toString(), 1);
@@ -617,44 +731,89 @@ public class SymbolicExecution extends SceneTransformer {
 								if (readRefCounter.get(rightOP.toString()) != null) {
 									//shared variable
 									readRefCounter.put(rightOP.toString(), readRefCounter.get(rightOP.toString()) + 1);
-									ArrayList<String> readConstraints = new ArrayList(5);
-									readConstraints.add(tID);
-									readConstraints.add("Read");
-									readConstraints.add(rightOP.toString());
-									readConstraints.add(readRefCounter.get(rightOP.toString()).toString());
-									readConstraints.add(typeStr);
+									ArrayList<String> readEvent = new ArrayList(5);
+									readEvent.add(tID);
+									readEvent.add("Read");
+									readEvent.add(rightOP.toString());
+									readEvent.add(readRefCounter.get(rightOP.toString()).toString());
+									readEvent.add(typeStr);
+									event_no++;
+									// System.out.println("O_"+tID+"_"+event_no+" "+readEvent.get(0)+", "+readEvent.get(1)+", "+readEvent.get(2)+", "+readEvent.get(3)+", "+readEvent.get(4));
 								}
 								else {
 									if (rightOP instanceof Constant) {
 										//<tID, Write, var name , ref number, value, type, Constant/Variable>
-										ArrayList<String> writeConstraints = new ArrayList(7);
+										ArrayList<String> writeEvents = new ArrayList(7);
 										
-										writeConstraints.add(tID);
-										writeConstraints.add("Write");
-										writeConstraints.add(leftOp.toString());
+										writeEvents.add(tID);
+										writeEvents.add("Write");
+										writeEvents.add(leftOp.toString());
 										isConstant = true;
 										// System.out.println("constant");
 										//add directly to z3
 										if (typeStr.equals("java.lang.Integer")) {
 											if (writeRefCounter.get(leftOp.toString()) != null) {
-												// writeConstraints.add(3, );
+												// writeEvents.add(3, );
 											}
 										}
 										else if (typeStr.equals("int")) {
 											IntConstant intConst = (IntConstant)rightOP; 
 											if (writeRefCounter.get(leftOp.toString()) != null) {
-												writeConstraints.add(writeRefCounter.get(leftOp.toString()).toString());
-												writeConstraints.add(intConst.toString());
-												writeConstraints.add(typeStr);
-												writeConstraints.add("Constant");
+												writeEvents.add(writeRefCounter.get(leftOp.toString()).toString());
+												writeEvents.add(intConst.toString());
+												writeEvents.add(typeStr);
+												writeEvents.add("Constant");
+												event_no++;
+												// System.out.println("O_"+tID+"_"+event_no+" "+writeEvents.get(0)+", "+writeEvents.get(1)+", "+
+													// writeEvents.get(2)+", "+writeEvents.get(3)+", "+writeEvents.get(4)+", "+writeEvents.get(5)
+													// +", "+writeEvents.get(6));
 											}
-											System.out.println(intConst.toString());
+											else {
+												//local variable
+												// System.out.println(leftOp.toString());
+												
+												if (locRefCounter.get(leftOp.toString()) != null) {
+													locRefCounter.put(leftOp.toString(), locRefCounter.get(leftOp.toString()) + 1);
+													locVarType.put(leftOp.toString(), typeStr);
+												}
+												else {
+													locRefCounter.put(leftOp.toString(), 1);
+													locVarType.put(leftOp.toString(), typeStr);
+												}
+											}
+											// System.out.println(intConst.toString());
 										}
 										else if (typeStr.equals("java.lang.Boolean")) {
 											
 										}
 										else if (typeStr.equals("boolean")) {
-											
+											// System.out.println("boolean");
+											//boolean is represented as 32 bit int in soot
+											if (rightOP instanceof IntConstant) {
+												IntConstant intConst = (IntConstant)rightOP;
+												
+												if (writeRefCounter.get(leftOp.toString()) != null) {
+													writeEvents.add(writeRefCounter.get(leftOp.toString()).toString());
+													writeEvents.add(intConst.toString());
+													writeEvents.add(typeStr);
+													writeEvents.add("Constant");
+													event_no++;
+													// System.out.println("O_"+tID+"_"+event_no+" "+writeEvents.get(0)+", "+writeEvents.get(1)+", "+
+														// writeEvents.get(2)+", "+writeEvents.get(3)+", "+writeEvents.get(4)+", "+writeEvents.get(5)
+														// +", "+writeEvents.get(6));
+												}
+												else {
+													//local variable
+													if (locRefCounter.get(leftOp.toString()) != null) {
+														locRefCounter.put(leftOp.toString(), locRefCounter.get(leftOp.toString()) + 1);
+														locVarType.put(leftOp.toString(), typeStr);
+													}
+													else {
+														locRefCounter.put(leftOp.toString(), 1);
+														locVarType.put(leftOp.toString(), typeStr);
+													}
+												}
+											}								
 										}
 										else if (typeStr.equals("java.lang.Double")) {
 											
@@ -678,23 +837,23 @@ public class SymbolicExecution extends SceneTransformer {
 								}
 								else if (writeRefCounter.get(leftOp.toString()) != null) {
 									//<tID, Write, var name , ref number, value, type, Constant/Variable>
-									ArrayList<String> writeConstraints = new ArrayList(7);
+									ArrayList<String> writeEvents = new ArrayList(7);
 
 									writeRefCounter.put(leftOp.toString(), writeRefCounter.get(leftOp.toString()) + 1);
-									writeConstraints.add(tID);
-									writeConstraints.add("Write");
-									writeConstraints.add(leftOp.toString());
-									writeConstraints.add(writeRefCounter.get(leftOp.toString()).toString());
+									writeEvents.add(tID);
+									writeEvents.add("Write");
+									writeEvents.add(leftOp.toString());
+									writeEvents.add(writeRefCounter.get(leftOp.toString()).toString());
 									readVal = new String();
 									readVal = readVal.concat("Read_");
 									readVal = readVal.concat(rightOP.toString());
 									readVal = readVal.concat("_");
 									//error 
-									System.out.println("Fucked Stmt is "+unit+" Left op is "+assign.getLeftOp().getType()+" Right op is "+assign.getRightOp().getType());
+									// System.out.println("Stmt is "+unit+" Left op is "+assign.getLeftOp().getType()+" Right op is "+assign.getRightOp().getType());
 									readVal = readVal.concat(locRefCounter.get(rightOP.toString()).toString());
-									writeConstraints.add(readVal);
-									writeConstraints.add(typeStr);
-									writeConstraints.add("Variable");
+									writeEvents.add(readVal);
+									writeEvents.add(typeStr);
+									writeEvents.add("Variable");
 								}
 								else {
 									if (locRefCounter.get(leftOp.toString()) != null) {
@@ -704,14 +863,14 @@ public class SymbolicExecution extends SceneTransformer {
 										locRefCounter.put(leftOp.toString(), 1);
 									}
 										//<tID, Write, var name , ref number, value, type, Constant/variable>
-									ArrayList<String> writeConstraints = new ArrayList(7);
+									ArrayList<String> writeEvents = new ArrayList(7);
 
 									//saves the type at write
 									locVarType.put(leftOp.toString(), typeStr);
-									writeConstraints.add(tID);
-									writeConstraints.add("Write");
-									writeConstraints.add(leftOp.toString());
-									writeConstraints.add(locRefCounter.get(leftOp.toString()).toString());
+									writeEvents.add(tID);
+									writeEvents.add("Write");
+									writeEvents.add(leftOp.toString());
+									writeEvents.add(locRefCounter.get(leftOp.toString()).toString());
 									readVal = new String();
 									//right operator is a global
 									if (readRefCounter.get(rightOP.toString()) != null) {
@@ -724,78 +883,84 @@ public class SymbolicExecution extends SceneTransformer {
 										readVal = readVal.concat(rightOP.toString());
 										readVal = readVal.concat("_" + locRefCounter.get(rightOP.toString()));
 									}
-									writeConstraints.add(readVal);
-									writeConstraints.add(typeStr);
-									writeConstraints.add("Variable");									
+									writeEvents.add(readVal);
+									writeEvents.add(typeStr);
+									writeEvents.add("Variable");									
 								}
 							}
 						}
 					}
 					else if (unit instanceof IfStmt) {
+
 						IfStmt ifStmt = (IfStmt)unit;
-						ConditionExpr condExpr = (ConditionExpr)ifStmt.getCondition();
-						//Path Constraints
-						// System.out.println("IfStmt");
-						// System.out.println("Condition : "+ifStmt.getCondition()+"Op1 is : "+condExpr.getOp1()+"Op2 is : "+condExpr.getOp2());
-						//by default branch is not taken
-						boolean isBranchTaken = true;
-						Integer nextBlockID = blockIDs.get(0);
-						if (nextBlockID == (currBlockID + 1)) {
-							//branch not taken
-							isBranchTaken = false;
-							// System.out.println("Branch not taken");
-						}
-						else {
-							// System.out.println("Branch taken");		
-						}
-						if (condExpr instanceof EqExpr) {
-							System.out.println("EqExpr");
-							if (isBranchTaken) {
-
+						System.out.println(ifStmt.toString());
+						if (ifStmt instanceof BinopExpr) {
+							BinopExpr binopExpr = (BinopExpr)ifStmt.getCondition();
+							Value op1 = binopExpr.getOp1();
+							Value op2 = binopExpr.getOp2();
+							//Path Constraints
+							// System.out.println("IfStmt");
+							// System.out.println("Condition : "+ifStmt.getCondition()+"Op1 is : "+binopExpr.getOp1()+"Op2 is : "+binopExpr.getOp2());
+							//by default branch is not taken
+							boolean isBranchTaken = true;
+							Integer nextBlockID = blockIDs.get(0);
+							if (nextBlockID == (currBlockID + 1)) {
+								//branch not taken
+								isBranchTaken = false;
+								// System.out.println("Branch not taken");
 							}
 							else {
-								//flip the condition
+								// System.out.println("Branch taken");		
 							}
-						}
-						else if (condExpr instanceof GeExpr) {
-							System.out.println("NeExpr");
-							if (isBranchTaken) {
+							if (binopExpr instanceof EqExpr) {
+								// System.out.println("EqExpr");
+								if (isBranchTaken) {
 
+								}
+								else {
+									//flip the condition
+								}
 							}
-							else {
-								//flip the condition
-							}
-						}
-						else if (condExpr instanceof GtExpr) {
-							if (isBranchTaken) {
+							else if (binopExpr instanceof GeExpr) {
+								// System.out.println("NeExpr");
+								if (isBranchTaken) {
 
+								}
+								else {
+									//flip the condition
+								}
 							}
-							else {
-								//flip the condition
-							}
-						}
-						else if (condExpr instanceof LeExpr) {
-							if (isBranchTaken) {
+							else if (binopExpr instanceof GtExpr) {
+								if (isBranchTaken) {
 
+								}
+								else {
+									//flip the condition
+								}
 							}
-							else {
-								//flip the condition
-							}				
-						}
-						else if (condExpr instanceof  LtExpr) {
-							if (isBranchTaken) {
+							else if (binopExpr instanceof LeExpr) {
+								if (isBranchTaken) {
 
+								}
+								else {
+									//flip the condition
+								}				
 							}
-							else {
-								//flip the condition
-							}
-						}
-						else if (condExpr instanceof NeExpr) {
-							if (isBranchTaken) {
+							else if (binopExpr instanceof  LtExpr) {
+								if (isBranchTaken) {
 
+								}
+								else {
+									//flip the condition
+								}
 							}
-							else {
-								//flip the condition
+							else if (binopExpr instanceof NeExpr) {
+								if (isBranchTaken) {
+
+								}
+								else {
+									//flip the condition
+								}
 							}
 						}
 					}
@@ -815,8 +980,6 @@ public class SymbolicExecution extends SceneTransformer {
 			}
 			// }
 		}
-		Context ctx = new Context(new HashMap<String, String>());
-		Solver solver = ctx.mkSolver();
 		out.close();
 		
 	    return;
