@@ -973,54 +973,147 @@ public class SymbolicExecution extends SceneTransformer {
 
 							if (binopExpr instanceof EqExpr) {
 								
-
 								// System.out.println("EqExpr");
 								if (isBranchTaken) {									
-									
+									if (isRightConstant) {
+										BoolExpr boolExpr = ctx.mkEq(intExpr1, intNum);
+										solver.add(boolExpr);
+									}
+									else {
+										BoolExpr boolExpr = ctx.mkEq(intExpr1, intExpr2);
+										solver.add(boolExpr);	
+									}
 								}
 								else {
 									//flip the condition
+									if (isRightConstant) {
+										BoolExpr boolExpr = ctx.mkEq(intExpr1, intNum);
+										boolExpr = ctx.mkNot(boolExpr);
+										solver.add(boolExpr);
+									}
+									else {
+										BoolExpr boolExpr = ctx.mkEq(intExpr1, intExpr2);
+										boolExpr = ctx.mkNot(boolExpr);
+										solver.add(boolExpr);
+									}
 								}
 							}
 							else if (binopExpr instanceof GeExpr) {
 								// System.out.println("NeExpr");
-								if (isBranchTaken) {
-
+								if (isBranchTaken) {									
+									if (isRightConstant) {
+										BoolExpr boolExpr = ctx.mkGe(intExpr1, intNum);
+										solver.add(boolExpr);
+									}
+									else {
+										BoolExpr boolExpr = ctx.mkGe(intExpr1, intExpr2);
+										solver.add(boolExpr);	
+									}
 								}
 								else {
 									//flip the condition
+									if (isRightConstant) {
+										BoolExpr boolExpr = ctx.mkLt(intExpr1, intNum);
+										solver.add(boolExpr);
+									}
+									else {
+										BoolExpr boolExpr = ctx.mkLt(intExpr1, intExpr2);
+										solver.add(boolExpr);	
+									}
 								}
 							}
 							else if (binopExpr instanceof GtExpr) {
-								if (isBranchTaken) {
-
+								if (isBranchTaken) {									
+									if (isRightConstant) {
+										BoolExpr boolExpr = ctx.mkGt(intExpr1, intNum);
+										solver.add(boolExpr);
+									}
+									else {
+										BoolExpr boolExpr = ctx.mkGt(intExpr1, intExpr2);
+										solver.add(boolExpr);	
+									}
 								}
 								else {
 									//flip the condition
+									if (isRightConstant) {
+										BoolExpr boolExpr = ctx.mkLe(intExpr1, intNum);
+										solver.add(boolExpr);
+									}
+									else {
+										BoolExpr boolExpr = ctx.mkLe(intExpr1, intExpr2);
+										solver.add(boolExpr);	
+									}
 								}
 							}
 							else if (binopExpr instanceof LeExpr) {
-								if (isBranchTaken) {
-
+								if (isBranchTaken) {									
+									if (isRightConstant) {
+										BoolExpr boolExpr = ctx.mkLe(intExpr1, intNum);
+										solver.add(boolExpr);
+									}
+									else {
+										BoolExpr boolExpr = ctx.mkLe(intExpr1, intExpr2);
+										solver.add(boolExpr);	
+									}
 								}
 								else {
 									//flip the condition
-								}				
+									if (isRightConstant) {
+										BoolExpr boolExpr = ctx.mkGt(intExpr1, intNum);
+										solver.add(boolExpr);
+									}
+									else {
+										BoolExpr boolExpr = ctx.mkGt(intExpr1, intExpr2);
+										solver.add(boolExpr);	
+									}
+								}
 							}
 							else if (binopExpr instanceof  LtExpr) {
-								if (isBranchTaken) {
-
+								if (isBranchTaken) {									
+									if (isRightConstant) {
+										BoolExpr boolExpr = ctx.mkLt(intExpr1, intNum);
+										solver.add(boolExpr);
+									}
+									else {
+										BoolExpr boolExpr = ctx.mkLt(intExpr1, intExpr2);
+										solver.add(boolExpr);	
+									}
 								}
 								else {
 									//flip the condition
+									if (isRightConstant) {
+										BoolExpr boolExpr = ctx.mkGe(intExpr1, intNum);
+										solver.add(boolExpr);
+									}
+									else {
+										BoolExpr boolExpr = ctx.mkGe(intExpr1, intExpr2);
+										solver.add(boolExpr);	
+									}
 								}
 							}
 							else if (binopExpr instanceof NeExpr) {
-								if (isBranchTaken) {
-
+								if (isBranchTaken) {									
+									if (isRightConstant) {
+										BoolExpr boolExpr = ctx.mkEq(intExpr1, intNum);
+										boolExpr = ctx.mkNot(boolExpr);
+										solver.add(boolExpr);
+									}
+									else {
+										BoolExpr boolExpr = ctx.mkEq(intExpr1, intExpr2);
+										boolExpr = ctx.mkNot(boolExpr);
+										solver.add(boolExpr);	
+									}
 								}
 								else {
 									//flip the condition
+									if (isRightConstant) {
+										BoolExpr boolExpr = ctx.mkEq(intExpr1, intNum);
+										solver.add(boolExpr);
+									}
+									else {
+										BoolExpr boolExpr = ctx.mkEq(intExpr1, intExpr2);
+										solver.add(boolExpr);	
+									}
 								}
 							}
 						}
