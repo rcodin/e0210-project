@@ -56,6 +56,15 @@ import com.microsoft.z3.IntNum;
 import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.Model;
 
+
+
+/*
+TODO
+*Handle parseInt
+*Handle functions with return values
+*Handle arithmatic and boolean operations
+*
+*/
 public class SymbolicExecution extends SceneTransformer {
 	String project;
 	String testcase;
@@ -361,7 +370,7 @@ public class SymbolicExecution extends SceneTransformer {
 				blockIDs = blockIDStack.pop();
 				unitIt = unitItStack.pop();
 				Integer currBlockID = currBlockIDStack.pop();
-				// System.out.println(Scene.v().getMethod(temp1.get(1)).getActiveBody());
+				System.out.println(Scene.v().getMethod(temp1.get(1)).getActiveBody());
 				while (unitIt.hasNext()) {
 					Unit unit = unitIt.next();
 
@@ -538,10 +547,16 @@ public class SymbolicExecution extends SceneTransformer {
 											IntConstant intConst = (IntConstant)invokeExpr.getArg(0);
 											// System.out.println(assign.toString()+invokeExpr.getArg(0));
 											int value = intConst.value;
+											String symName = new String();
 
 											if (writeRefCounter.get(leftOp.toString()) != null) {
 												writeRefCounter.put(leftOp.toString(), writeRefCounter.get(leftOp.toString()) + 1);
 												writeEvents.add(writeRefCounter.get(leftOp.toString()).toString());
+												
+												symName = symName.concat("Write_");
+												symName = symName.concat(leftOp.toString());
+												symName = symName.concat("_"+writeRefCounter.get(leftOp.toString()).toString());
+												
 												Integer temp = (Integer)value;
 												writeEvents.add(temp.toString());
 												writeEvents.add("java.lang.Integer");
@@ -553,27 +568,47 @@ public class SymbolicExecution extends SceneTransformer {
 															// +", "+writeEvents.get(6));
 											}
 											//put it directly in z3
-											else if (locRefCounter.get(leftOp.toString()) != null)
+											else if (locRefCounter.get(leftOp.toString()) != null) {
 												locRefCounter.put(leftOp.toString(), locRefCounter.get(leftOp.toString()) + 1);
-											else
+												symName = symName.concat(leftOp.toString());
+												symName = symName.concat("_"+locRefCounter.get(leftOp.toString()).toString());
+											}
+											else {
 												locRefCounter.put(leftOp.toString(), 1);
+												symName = symName.concat(leftOp.toString());
+												symName = symName.concat("_"+locRefCounter.get(leftOp.toString()).toString());	
+											}
 											locVarType.put(leftOp.toString(), typeStr);
+
+											IntExpr intExpr = ctx.mkIntConst(symName);
+											IntNum intNum = ctx.mkInt(value);
+	
+											BoolExpr boolExpr = ctx.mkEq(intExpr, intNum);
+											solver.add(boolExpr);
 										}
 										else {
 											String arg = invokeExpr.getArg(0).toString();
+											System.out.println(unit);
 
 											if (readRefCounter.get(arg) != null) {//argument is a global variable
 												
 											}
 											else if (locRefCounter.get(arg) != null) {
+												String readVal = new String();
+												String leftSymName = new String();
+
+												// readVal = readVal.concat("Read_");
+												readVal = readVal.concat(arg);
+												readVal = readVal.concat("_"+locRefCounter.get(arg));
 												if (writeRefCounter.get(leftOp.toString()) != null) {
 													writeRefCounter.put(leftOp.toString(), writeRefCounter.get(leftOp.toString()) + 1);
 													writeEvents.add(writeRefCounter.get(leftOp.toString()).toString());
-													String readVal = new String();
-													readVal = readVal.concat("Read_");
-													readVal = readVal.concat(arg);
-													readVal = readVal.concat("_"+locRefCounter.get(arg));
+
+													leftSymName = leftSymName.concat("Write_");
+													leftSymName = leftSymName.concat(leftOp.toString());
+													leftSymName = leftSymName.concat("_"+writeRefCounter.get(leftOp.toString()).toString());
 													// writeEvents.add(temp.toString());
+													writeEvents.add(readVal);
 													writeEvents.add("java.lang.Integer");
 													writeEvents.add("Variable");
 													event_no++;
@@ -583,11 +618,23 @@ public class SymbolicExecution extends SceneTransformer {
 															// +", "+writeEvents.get(6));
 												}
 												//put it directly in z3
-												else if (locRefCounter.get(leftOp.toString()) != null)
+												else if (locRefCounter.get(leftOp.toString()) != null) {
+													System.out.println(unit);
 													locRefCounter.put(leftOp.toString(), locRefCounter.get(leftOp.toString()) + 1);
-												else
+													leftSymName = leftSymName.concat(leftOp.toString());
+													leftSymName = leftSymName.concat("_"+ locRefCounter.get(leftOp.toString()).toString());
+												}
+												else {
+													System.out.println(unit);
 													locRefCounter.put(leftOp.toString(), 1);
+													leftSymName = leftSymName.concat(leftOp.toString());
+													leftSymName = leftSymName.concat("_"+ locRefCounter.get(leftOp.toString()).toString());
+												}
 												locVarType.put(leftOp.toString(), typeStr);
+												IntExpr intExpr1 = ctx.mkIntConst(readVal);
+												IntExpr intExpr2 = ctx.mkIntConst(leftSymName);
+												BoolExpr boolExpr = ctx.mkEq(intExpr1 , intExpr2);
+												solver.add(boolExpr);	
 											}
 											else {
 												//this case is not possible because there should be write before a read
@@ -596,17 +643,26 @@ public class SymbolicExecution extends SceneTransformer {
 									}			
 								}
 								else if (typeStr.equals("int")) {
-									// System.out.println(assign);
+									
 									if (calledMethod.toString().contains("<java.lang.Integer: int intValue()>")) {
 										InstanceInvokeExpr instInvokeExpr = (InstanceInvokeExpr)assign.getInvokeExpr();
 										Value calledObj = instInvokeExpr.getBase();
+
+										String readVal = new String();
+										String leftSymName = new String();
+										
+										// System.out.println(assign);
+										readVal = readVal.concat(calledObj.toString());
+										readVal = readVal.concat("_"+locRefCounter.get(calledObj.toString()));
 										if (writeRefCounter.get(leftOp.toString()) != null) {
 											writeRefCounter.put(leftOp.toString(), writeRefCounter.get(leftOp.toString()) + 1);
 											writeEvents.add(writeRefCounter.get(leftOp.toString()).toString());
-											String readVal = new String();
-											readVal = readVal.concat("Read_");
-											readVal = readVal.concat(calledObj.toString());
-											readVal = readVal.concat("_"+locRefCounter.get(calledObj.toString()));
+
+											leftSymName = leftSymName.concat("Write_");
+											leftSymName = leftSymName.concat(leftOp.toString());
+											leftSymName = leftSymName.concat("_"+writeRefCounter.get(leftOp.toString()).toString());
+											// readVal = readVal.concat("Read_");
+											
 											// writeEvents.add(temp.toString());
 											writeEvents.add("int");
 											writeEvents.add("Variable");
@@ -616,11 +672,21 @@ public class SymbolicExecution extends SceneTransformer {
 														// writeEvents.get(2)+", "+writeEvents.get(3)+", "+writeEvents.get(4)+", "+writeEvents.get(5)
 														// +", "+writeEvents.get(6));
 										}
-										else if (locRefCounter.get(leftOp.toString()) != null)
+										else if (locRefCounter.get(leftOp.toString()) != null) {
 											locRefCounter.put(leftOp.toString(), locRefCounter.get(leftOp.toString()) + 1);
-										else
+											leftSymName = leftSymName.concat(leftOp.toString());
+											leftSymName = leftSymName.concat("_"+ locRefCounter.get(leftOp.toString()).toString());
+										}
+										else {
 											locRefCounter.put(leftOp.toString(), 1);
+											leftSymName = leftSymName.concat(leftOp.toString());
+											leftSymName = leftSymName.concat("_"+ locRefCounter.get(leftOp.toString()).toString());
+										}
 										locVarType.put(leftOp.toString(), typeStr);
+										IntExpr intExpr1 = ctx.mkIntConst(leftSymName);
+										IntExpr intExpr2 = ctx.mkIntConst(readVal);
+										BoolExpr boolExpr = ctx.mkEq(intExpr1 , intExpr2);
+										solver.add(boolExpr);	
 									}
 								}
 								else if (typeStr.equals("java.lang.Boolean")) {
@@ -628,10 +694,16 @@ public class SymbolicExecution extends SceneTransformer {
 										IntConstant intConst = (IntConstant)invokeExpr.getArg(0);
 										// System.out.println(assign.toString()+invokeExpr.getArg(0));
 										int value = intConst.value;
+										String symName = new String();
 
 										if (writeRefCounter.get(leftOp.toString()) != null) {
 											writeRefCounter.put(leftOp.toString(), writeRefCounter.get(leftOp.toString()) + 1);
 											writeEvents.add(writeRefCounter.get(leftOp.toString()).toString());
+
+											symName = symName.concat("Write_");
+											symName = symName.concat(leftOp.toString());
+											symName = symName.concat("_"+writeRefCounter.get(leftOp.toString()).toString());
+												
 											Integer temp = (Integer)value;
 											writeEvents.add(temp.toString());
 											writeEvents.add("java.lang.Boolean");
@@ -642,11 +714,24 @@ public class SymbolicExecution extends SceneTransformer {
 														// writeEvents.get(2)+", "+writeEvents.get(3)+", "+writeEvents.get(4)+", "+writeEvents.get(5)
 														// +", "+writeEvents.get(6));
 										}
-										else if (locRefCounter.get(leftOp.toString()) != null)
+										else if (locRefCounter.get(leftOp.toString()) != null) {
 											locRefCounter.put(leftOp.toString(), locRefCounter.get(leftOp.toString()) + 1);
-										else
+											symName = symName.concat(leftOp.toString());
+											symName = symName.concat("_"+locRefCounter.get(leftOp.toString()).toString());
+										}
+										else {
 											locRefCounter.put(leftOp.toString(), 1);
+											symName = symName.concat(leftOp.toString());
+											symName = symName.concat("_"+locRefCounter.get(leftOp.toString()).toString());
+										}
 										locVarType.put(leftOp.toString(), typeStr);
+										boolean boolVal = false;
+										if (value == 1)
+											boolVal = true;
+										BoolExpr boolExpr = ctx.mkBoolConst(symName);
+										BoolExpr boolNum = ctx.mkBool(boolVal);
+										BoolExpr boolExpr1 = ctx.mkEq(boolExpr, boolNum);
+										solver.add(boolExpr1);
 									}
 								}
 								else if (typeStr.equals("boolean")) {
@@ -654,15 +739,26 @@ public class SymbolicExecution extends SceneTransformer {
 									Value calledObj = instInvokeExpr.getBase();
 									// System.out.println(calledObj);
 
+									String readVal = new String();
+									String leftSymName = new String();
+										
+										// System.out.println(assign);
+									readVal = readVal.concat(calledObj.toString());
+									readVal = readVal.concat("_"+locRefCounter.get(calledObj.toString()));
 									if (calledMethod.toString().contains("<java.lang.Boolean: boolean booleanValue()>")) {
 										if (writeRefCounter.get(leftOp.toString()) != null) {
 											writeRefCounter.put(leftOp.toString(), writeRefCounter.get(leftOp.toString()) + 1);
 											writeEvents.add(writeRefCounter.get(leftOp.toString()).toString());
-											String readVal = new String();
-											readVal = readVal.concat("Read_");
-											readVal = readVal.concat(calledObj.toString());
-											readVal = readVal.concat("_"+locRefCounter.get(calledObj.toString()));
+											// String readVal = new String();
+											// readVal = readVal.concat("Read_");
+											// readVal = readVal.concat(calledObj.toString());
+											// readVal = readVal.concat("_"+locRefCounter.get(calledObj.toString()));
 											// writeEvents.add(temp.toString());
+
+											leftSymName = leftSymName.concat("Write_");
+											leftSymName = leftSymName.concat(leftOp.toString());
+											leftSymName = leftSymName.concat("_"+writeRefCounter.get(leftOp.toString()).toString());
+
 											writeEvents.add("int");
 											writeEvents.add("Variable");
 											event_no++;
@@ -670,12 +766,22 @@ public class SymbolicExecution extends SceneTransformer {
 											// System.out.println("O_"+tID+"_"+event_no+" "+writeEvents.get(0)+", "+writeEvents.get(1)+", "+
 														// writeEvents.get(2)+", "+writeEvents.get(3)+", "+writeEvents.get(4)+", "+writeEvents.get(5)
 														// +", "+writeEvents.get(6));
-										}
-										else if (locRefCounter.get(leftOp.toString()) != null)
+										} 
+										else if (locRefCounter.get(leftOp.toString()) != null) {
 											locRefCounter.put(leftOp.toString(), locRefCounter.get(leftOp.toString()) + 1);
-										else
+											leftSymName = leftSymName.concat(leftOp.toString());
+											leftSymName = leftSymName.concat("_"+ locRefCounter.get(leftOp.toString()).toString());
+										}
+										else {
 											locRefCounter.put(leftOp.toString(), 1);
+											leftSymName = leftSymName.concat(leftOp.toString());
+											leftSymName = leftSymName.concat("_"+ locRefCounter.get(leftOp.toString()).toString());
+										}
 										locVarType.put(leftOp.toString(), typeStr);
+										BoolExpr intExpr1 = ctx.mkBoolConst(leftSymName);
+										BoolExpr intExpr2 = ctx.mkBoolConst(readVal);
+										BoolExpr boolExpr = ctx.mkEq(intExpr1 , intExpr2);
+										solver.add(boolExpr);
 									}
 								}
 								else if (typeStr.equals("java.lang.Double")) {
@@ -750,6 +856,7 @@ public class SymbolicExecution extends SceneTransformer {
 							// System.out.println("return value of arraylist is : "+ ret.get(0));
 							continue outloop;
 						}
+						//$i = 5 or $i = $r
 						else {
 							boolean isConstant = false;//flag to specify there is concrete value present in the write side or not
 							if (typeStr.equals("java.lang.Integer") || typeStr.equals("java.lang.Boolean") || 
@@ -777,7 +884,9 @@ public class SymbolicExecution extends SceneTransformer {
 									if (rightOP instanceof Constant) {
 										//<tID, Write, var name , ref number, value, type, Constant/Variable>
 										ArrayList<String> writeEvents = new ArrayList(7);
-										
+										String symName = new String();
+
+
 										writeEvents.add(tID);
 										writeEvents.add("Write");
 										writeEvents.add(leftOp.toString());
@@ -793,13 +902,21 @@ public class SymbolicExecution extends SceneTransformer {
 											IntConstant intConst = (IntConstant)rightOP; 
 											if (writeRefCounter.get(leftOp.toString()) != null) {
 												writeEvents.add(writeRefCounter.get(leftOp.toString()).toString());
+
+												//for z3
+												symName = symName.concat("Write_");
+												symName = symName.concat(leftOp.toString());
+												symName = symName.concat("_"+writeRefCounter.get(leftOp.toString()).toString());
+												
+
 												writeEvents.add(intConst.toString());
 												writeEvents.add(typeStr);
 												writeEvents.add("Constant");
 												event_no++;
-												// System.out.println("O_"+tID+"_"+event_no+" "+writeEvents.get(0)+", "+writeEvents.get(1)+", "+
-													// writeEvents.get(2)+", "+writeEvents.get(3)+", "+writeEvents.get(4)+", "+writeEvents.get(5)
-													// +", "+writeEvents.get(6));
+												currThreadEvents.put(event_no, writeEvents);
+												System.out.println("O_"+tID+"_"+event_no+" "+writeEvents.get(0)+", "+writeEvents.get(1)+", "+
+													writeEvents.get(2)+", "+writeEvents.get(3)+", "+writeEvents.get(4)+", "+writeEvents.get(5)
+													+", "+writeEvents.get(6));
 											}
 											else {
 												//local variable
@@ -813,7 +930,14 @@ public class SymbolicExecution extends SceneTransformer {
 													locRefCounter.put(leftOp.toString(), 1);
 													locVarType.put(leftOp.toString(), typeStr);
 												}
+												symName = symName.concat(leftOp.toString());
+												symName = symName.concat("_"+locRefCounter.get(leftOp.toString()).toString());
 											}
+											IntExpr intExpr = ctx.mkIntConst(symName);
+											IntNum intNum = ctx.mkInt(intConst.toString());
+	
+											BoolExpr boolExpr = ctx.mkEq(intExpr, intNum);
+											solver.add(boolExpr);
 											// System.out.println(intConst.toString());
 										}
 										else if (typeStr.equals("java.lang.Boolean")) {
@@ -828,12 +952,19 @@ public class SymbolicExecution extends SceneTransformer {
 												if (writeRefCounter.get(leftOp.toString()) != null) {
 													writeEvents.add(writeRefCounter.get(leftOp.toString()).toString());
 													writeEvents.add(intConst.toString());
+
+													symName = symName.concat("Write_");
+													symName = symName.concat(leftOp.toString());
+													symName = symName.concat("_"+writeRefCounter.get(leftOp.toString()).toString());
+
+
 													writeEvents.add(typeStr);
 													writeEvents.add("Constant");
 													event_no++;
-													// System.out.println("O_"+tID+"_"+event_no+" "+writeEvents.get(0)+", "+writeEvents.get(1)+", "+
-														// writeEvents.get(2)+", "+writeEvents.get(3)+", "+writeEvents.get(4)+", "+writeEvents.get(5)
-														// +", "+writeEvents.get(6));
+													System.out.println("O_"+tID+"_"+event_no+" "+writeEvents.get(0)+", "+writeEvents.get(1)+", "+
+														writeEvents.get(2)+", "+writeEvents.get(3)+", "+writeEvents.get(4)+", "+writeEvents.get(5)
+														+", "+writeEvents.get(6));
+													currThreadEvents.put(event_no, writeEvents);
 												}
 												else {
 													//local variable
@@ -845,7 +976,17 @@ public class SymbolicExecution extends SceneTransformer {
 														locRefCounter.put(leftOp.toString(), 1);
 														locVarType.put(leftOp.toString(), typeStr);
 													}
+													symName = symName.concat(leftOp.toString());
+													symName = symName.concat("_"+locRefCounter.get(leftOp.toString()).toString());
 												}
+												boolean boolVal = false;
+												if (intConst.value == 1)
+													boolVal = true;
+												BoolExpr boolExpr = ctx.mkBoolConst(symName);
+												BoolExpr boolNum = ctx.mkBool(boolVal);
+												BoolExpr boolExpr1 = ctx.mkEq(boolExpr, boolNum);
+												solver.add(boolExpr1);
+
 											}								
 										}
 										else if (typeStr.equals("java.lang.Double")) {
@@ -871,6 +1012,7 @@ public class SymbolicExecution extends SceneTransformer {
 								else if (writeRefCounter.get(leftOp.toString()) != null) {
 									//<tID, Write, var name , ref number, value, type, Constant/Variable>
 									ArrayList<String> writeEvents = new ArrayList(7);
+									String symName = new String(); //for z3
 
 									writeRefCounter.put(leftOp.toString(), writeRefCounter.get(leftOp.toString()) + 1);
 									writeEvents.add(tID);
@@ -878,47 +1020,77 @@ public class SymbolicExecution extends SceneTransformer {
 									writeEvents.add(leftOp.toString());
 									writeEvents.add(writeRefCounter.get(leftOp.toString()).toString());
 									readVal = new String();
-									readVal = readVal.concat("Read_");
+									// readVal = readVal.concat("Read_");
 									readVal = readVal.concat(rightOP.toString());
 									readVal = readVal.concat("_");
 									//error 
-									// System.out.println("Stmt is "+unit+" Left op is "+assign.getLeftOp().getType()+" Right op is "+assign.getRightOp().getType());
+									System.out.println("Stmt is "+unit+" Left op is "+assign.getLeftOp().getType()+" Right op is "+assign.getRightOp().getType());
 									readVal = readVal.concat(locRefCounter.get(rightOP.toString()).toString());
+
+
+									symName = symName.concat("Write_");
+									symName = symName.concat(leftOp.toString());
+									symName = symName.concat("_"+writeRefCounter.get(leftOp.toString()).toString());
+
 									writeEvents.add(readVal);
 									writeEvents.add(typeStr);
 									writeEvents.add("Variable");
+
+									IntExpr intExpr1 = ctx.mkIntConst(symName);
+									IntExpr intExpr2 = ctx.mkIntConst(readVal);
+									BoolExpr boolExpr = ctx.mkEq(intExpr1 , intExpr2);
+									solver.add(boolExpr);
+									System.out.println("O_"+tID+"_"+event_no+" "+writeEvents.get(0)+", "+writeEvents.get(1)+", "+
+											writeEvents.get(2)+", "+writeEvents.get(3)+", "+writeEvents.get(4)+", "+writeEvents.get(5)
+											+", "+writeEvents.get(6));
+									currThreadEvents.put(event_no, writeEvents);
+
 								}
 								else {
-									if (locRefCounter.get(leftOp.toString()) != null) {
+									if (locRefCounter.get(leftOp.toString()) != null)
 										locRefCounter.put(leftOp.toString(), locRefCounter.get(leftOp.toString()) + 1);
-									}
-									else {
+									else
 										locRefCounter.put(leftOp.toString(), 1);
-									}
-										//<tID, Write, var name , ref number, value, type, Constant/variable>
-									ArrayList<String> writeEvents = new ArrayList(7);
-
-									//saves the type at write
-									locVarType.put(leftOp.toString(), typeStr);
-									writeEvents.add(tID);
-									writeEvents.add("Write");
-									writeEvents.add(leftOp.toString());
-									writeEvents.add(locRefCounter.get(leftOp.toString()).toString());
+									String symName = new String(); //for z3
 									readVal = new String();
-									//right operator is a global
+
+									symName = symName.concat(leftOp.toString());
+									symName = symName.concat("_"+locRefCounter.get(leftOp.toString()).toString());
 									if (readRefCounter.get(rightOP.toString()) != null) {
 										readVal = readVal.concat("Read_");
 										readVal = readVal.concat(rightOP.toString());
 										readVal = readVal.concat("_" + readRefCounter.get(rightOP.toString()));
 									}
 									else {
-										readVal = readVal.concat("Read_");
 										readVal = readVal.concat(rightOP.toString());
-										readVal = readVal.concat("_" + locRefCounter.get(rightOP.toString()));
+										readVal = readVal.concat("_" + locRefCounter.get(rightOP.toString()));	
 									}
-									writeEvents.add(readVal);
-									writeEvents.add(typeStr);
-									writeEvents.add("Variable");									
+
+
+										//<tID, Write, var name , ref number, value, type, Constant/variable>
+									// ArrayList<String> writeEvents = new ArrayList(7);
+
+									// //saves the type at write
+									// locVarType.put(leftOp.toString(), typeStr);
+									// writeEvents.add(tID);
+									// writeEvents.add("Write");
+									// writeEvents.add(leftOp.toString());
+									// writeEvents.add(locRefCounter.get(leftOp.toString()).toString());
+									// readVal = new String();
+									// //right operator is a global
+									// if (readRefCounter.get(rightOP.toString()) != null) {
+									// 	// readVal = readVal.concat("Read_");
+									// 	readVal = readVal.concat(rightOP.toString());
+									// 	readVal = readVal.concat("_" + readRefCounter.get(rightOP.toString()));
+									// }
+									// else {
+									// 	// readVal = readVal.concat("Read_");
+									// 	readVal = readVal.concat(rightOP.toString());
+									// 	readVal = readVal.concat("_" + locRefCounter.get(rightOP.toString()));
+									// }
+									// writeEvents.add(readVal);
+									// writeEvents.add(typeStr);
+									// writeEvents.add("Variable");									
 								}
 							}
 						}
@@ -952,7 +1124,7 @@ public class SymbolicExecution extends SceneTransformer {
 								isRightConstant = true;
 							}
 
-
+							//handle bool
 							String loc_Sym_val = new String();
 							loc_Sym_val = loc_Sym_val.concat(op1.toString());//right oparand
 							loc_Sym_val = loc_Sym_val.concat("_"+locRefCounter.get(op1.toString()));
@@ -1133,6 +1305,8 @@ public class SymbolicExecution extends SceneTransformer {
 				}
 			}
 			// }
+			ArrayList<String> endEvent = new ArrayList();
+			
 		}
 		out.close();
 		
