@@ -16,8 +16,6 @@ public class Main {
 
 	static Lock lock = new ReentrantLock();
 	static Integer shared_int_a = 1;
-	static int a = 1;
-	static boolean b = true;
 
 	static class MyThread extends Thread {
 		@Override
@@ -28,17 +26,12 @@ public class Main {
 									 */
 
 			lock.lock();
-			a = 5;
-			b = true;
-			b = false;
 			if (shared_int_a == 1)
 			/* Only one thread will be able to enter this */
 			{
-			    PoP_Util.registerEvent (1);
 				shared_int_a = 2;
 				System.err.println(Thread.currentThread().getName()+" Wrote shared_int_a");
 			} else {
-			    PoP_Util.registerEvent(2);
 				System.err.println(Thread.currentThread().getName()+" Couldn't write shared_int_a");
 			}
 
@@ -50,6 +43,21 @@ public class Main {
 
 		MyThread t1 = new MyThread();
 		MyThread t2 = new MyThread();
+		MyThread t3 = new MyThread();
+
+		t1.start();
+		t2.start();
+		t3.start();
+
+		t1.join();
+		t2.join();
+		t3.join();
+
+		return;
+	}
+
+}
+ = new MyThread();
 		MyThread t3 = new MyThread();
         
         PoP_Util.registerFork(t1);
