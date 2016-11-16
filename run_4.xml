@@ -40,7 +40,7 @@ Hence added fork="true" for all the java task in the file.
 	<!-- Validate the input arguments -->
 	<condition property="valid">
 		<and>
-			<matches pattern="^project-[1-4]$" string="${project}" />
+			<matches pattern="^project-4$" string="${project}" />
 			<or>
 				<!-- Change the regex to add more testcases beyond test20 -->
 				<!-- TODO: This allows test0 as well -->
@@ -77,7 +77,7 @@ Hence added fork="true" for all the java task in the file.
 	<target name="-runall">
 		<!-- Loop for all the test cases -->
 		<!-- Change the list to add more test cases -->
-		<for list="1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25" param="num">
+		<for list="1,2,3,4,5,6,7,8,9,10,11,12,13,14,15" param="num">
 			<sequential>
 
 				<!-- Run SOOT for each test case -->
@@ -138,11 +138,11 @@ Hence added fork="true" for all the java task in the file.
 
 		<!-- Loop for all the test cases -->
 		<!-- Change the list to add more test cases -->
-		<for list="1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25" param="num">
+		<for list="1,2,3,4,5,6,7,8,9,10,11,12,13,14,15" param="num">
 			<sequential>
 
 				<!-- Remove old sootBin folder -->
-				<delete dir="Testcases/${project}/sootBin/test@{num}" />
+				<delete dir="Testcases/${project}/sootBin/" />
 
 				<!-- Run SOOT -->
 				<java classname="e0210.Main" fork="true">
@@ -155,9 +155,16 @@ Hence added fork="true" for all the java task in the file.
 				<echo>[Completed "run" mode for test@{num}]</echo>
 				<echo />
 
+				
 				<!-- Remove old output file -->
-				<delete file="Testcases/${project}/output/test@{num}">
-				</delete>
+		        <delete file="Testcases/${project}/output/test@{num}">
+		        </delete>
+		        <delete file="Testcases/${project}/output/test@{num}.record_run.pathLog">
+		        </delete>
+		        <delete file="Testcases/${project}/output/test@{num}.error">
+		        </delete>
+		        <delete file="Testcases/${project}/output/test@{num}}.result">
+		        </delete>
 
 				<echo>[Executing test@{num}]</echo>
 
@@ -172,51 +179,86 @@ Hence added fork="true" for all the java task in the file.
 					<arg line="${input@{num}}" />
 				</java>
 
-				<!-- Remove old processed-output file -->
-				<delete file="Testcases/${project}/processed-output/test@{num}">
-				</delete>
+                
+                <move file="pathLog" tofile="Testcases/${project}/output/test@{num}.record_run.pathLog"/>
+                
+                <!-- Remove old processed-output file -->
+		        <delete file="Testcases/${project}/processed-output/test@{num}}.global_trace">
+		        </delete>
+		        <delete file="Testcases/${project}/processed-output/test@{num}.tuples">
+		        </delete>
+		        <delete file="Testcases/${project}/processed-output/test@{num}.replay_run.pathLog">
+		        </delete>
+		
+		
 
-				<echo />
-				<echo>[Post-processing for test@{num}]</echo>
-				<echo />
+		        <echo />
+		        <echo>[Starting global trace construction for test@{num}]</echo>
+		        <echo />
 
-				<!-- Run the program which does post-processing -->
-				<java classname="e0210.ProcessOutput" fork="true">
-					<classpath refid="e0210.classpath" />
-					<arg value="${project}" />
-					<arg value="test@{num}" />
-				</java>
+                <!-- Remove old sootBin folder.. TODO wasn't there before-->
+	        	<delete dir="Testcases/${project}/sootBin/" />
 
-				<echo />
-				<echo>[Completed post-processing for test@{num}]</echo>
-				<echo />
+				<!-- Run the program which does symbolic execution and constraint solving -->
+		        <java classname="e0210.TraceMaker" failonerror="true" fork="true">
+			        <classpath refid="e0210.classpath" />
+			        <arg value="${project}" />
+			        <arg value="test@{num}" />
+		        </java>
 
-				<echo />
-				<echo>[Checking the output of test@{num}]</echo>
-				<echo />
+                 <!-- Remove sootBin folder TODO wasn't there before-->
+		        <delete dir="Testcases/${project}/sootBin/" />
+               
+		        <echo />
+		        <echo>[Completed global trace construction for test@{num}]</echo>
+		        <echo />
+
+		        <echo />
+		        <echo>[Replaying for test@{num}]</echo>
+		        <echo />
 
 				<!-- Run diff on the output files to verify the correctness -->
-				<exec executable="sh" resultproperty="exit-code-@{num}">
-					<redirector output="Testcases/${project}/output/test@{num}.result" alwayslog="true" />
-					<arg value="-c" />
-					<arg value="diff Testcases/output/${project}/test@{num} Testcases/${project}/processed-output/test@{num} ; if [ $? -eq 0 ]; then echo PASS; else echo FAIL; return 1; fi" />
-				</exec>
+		
+		        <exec dir="." executable="bash" resultproperty="exit-code-@{num}">
+			        <redirector output="Testcases/${project}/output/test@{num}.result" alwayslog="true" />
+			        <arg value="-c" />
+			        <arg value="./replay.sh test@{num}" />
+		        </exec>
 
 				<if>
-					<equals arg1="${exit-code-@{num}}" arg2="1" />
+					<equals arg1="${exit-code-@{num}}" arg2="0" />
 					<then>
-						<var name="temp" value="${summary}Test @{num} - FAIL${line.separator}" />
+						<var name="temp" value="${summary}Test @{num} - Replay: Complete; Correct path: Pass ${line.separator}" />
 						<var name="summary" value="${temp}" />
 					</then>
 					<else>
-						<var name="temp" value="${summary}Test @{num} - Pass${line.separator}" />
-						<var name="summary" value="${temp}" />
+					    <if>
+					        <equals arg1="${exit-code-@{num}}" arg2="1" />
+					        <then>
+						        <var name="temp" value="${summary}Test @{num} - Replay: Complete; Correct path: Fail ${line.separator}" />
+						        <var name="summary" value="${temp}" />
+					        </then>
+					        <else>
+					            <if>
+					                <equals arg1="${exit-code-@{num}}" arg2="2" />
+					                <then>
+						                <var name="temp" value="${summary}Test @{num} - Replay: Error; Correct path: Fail ${line.separator}" />
+						                <var name="summary" value="${temp}" />
+						            </then>
+						            <else>
+						                    <var name="temp" value="${summary}Test @{num} - Miscellaneous error. Contact TA ${line.separator}" />
+						                    <var name="summary" value="${temp}" />
+						               
+						            </else>
+						        </if>
+						    </else>
+						</if>
 					</else>
 				</if>
 
-				<echo />
-				<echo>[Completed "test" mode for test@{num}]</echo>
-				<echo />
+		        <echo />
+		        <echo>[Completed "test" mode for test@{num}]</echo>
+		        <echo />
 			</sequential>
 		</for>
 
@@ -233,7 +275,7 @@ Hence added fork="true" for all the java task in the file.
 		<mkdir dir="Testcases/${project}/processed-output" />
 
 		<!-- Remove old sootBin folder -->
-		<delete dir="Testcases/${project}/sootBin/${testcase}" />
+		<delete dir="Testcases/${project}/sootBin/" />
 
 		<!-- Run SOOT -->
 		<java classname="e0210.Main" failonerror="true" fork="true">
@@ -249,6 +291,13 @@ Hence added fork="true" for all the java task in the file.
 		<!-- Remove old output file -->
 		<delete file="Testcases/${project}/output/${testcase}">
 		</delete>
+		<delete file="Testcases/${project}/output/${testcase}.record_run.pathLog">
+		</delete>
+		<delete file="Testcases/${project}/output/${testcase}.error">
+		</delete>
+		<delete file="Testcases/${project}/output/${testcase}.result">
+		</delete>
+		
 
 		<echo>[Executing ${testcase}]</echo>
 
@@ -263,13 +312,22 @@ Hence added fork="true" for all the java task in the file.
 			<arg line="${input}" />
 		</java>
 
+        <move file="pathLog" tofile="Testcases/${project}/output/${testcase}.record_run.pathLog"/>
+        
 		<!-- Remove old processed-output file -->
-		<delete file="Testcases/${project}/processed-output/${testcase}">
+		<delete file="Testcases/${project}/processed-output/${testcase}.global_trace">
+		</delete>
+		<delete file="Testcases/${project}/processed-output/${testcase}.tuples">
+		</delete>
+		<delete file="Testcases/${project}/processed-output/${testcase}.replay_run.pathLog">
 		</delete>
 
 		<echo />
-		<echo>[Post-processing for ${testcase}]</echo>
+		<echo>[Starting global trace construction for ${testcase}]</echo>
 		<echo />
+
+        <!-- Remove old sootBin folder -->
+		<delete dir="Testcases/${project}/sootBin/" />
 
 		<!-- Run the program which does symbolic execution and constraint solving -->
 		<java classname="e0210.TraceMaker" failonerror="true" fork="true">
@@ -278,23 +336,27 @@ Hence added fork="true" for all the java task in the file.
 			<arg value="${testcase}" />
 		</java>
 
+        <!-- Remove sootBin folder -->
+		<delete dir="Testcases/${project}/sootBin/" />
+
+
 		<echo />
-		<echo>[Completed post-processing for ${testcase}]</echo>
+		<echo>[Completed global trace construction for ${testcase}]</echo>
 		<echo />
 
 		<echo />
-		<echo>[Checking the output for ${testcase}]</echo>
+		<echo>[Replaying for ${testcase}]</echo>
 		<echo />
 
 		<!-- Run diff on the output files to verify the correctness -->
-		<!--
-		<exec executable="sh" resultproperty="exit-code">
+		
+		<exec dir="." executable="bash" resultproperty="exit-code">
 			<redirector output="Testcases/${project}/output/${testcase}.result" alwayslog="true" />
 			<arg value="-c" />
-			<arg value="diff Testcases/output/${project}/${testcase} Testcases/${project}/processed-output/${testcase} ; if [ $? -eq 0 ]; then echo PASS; else echo FAIL; return 1; fi" />
+			<arg value="./replay.sh ${testcase}" />
 		</exec>
-		-->
-
+	
+	   
 		<echo />
 		<echo>[Completed "test" mode for ${testcase}]</echo>
 		<echo />

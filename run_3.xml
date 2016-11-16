@@ -1,0 +1,326 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+
+<!--
+@author Sridhar Gopinath		-		g.sridhar53@gmail.com
+
+Course project,
+Principles of Programming Course, Fall - 2016,
+Computer Science and Automation (CSA),
+Indian Institute of Science (IISc),
+Bangalore
+-->
+
+<!--
+
+NOTE:
+"If odd things go wrong when you run this task, set fork="true" to use a new JVM."
+Odd things actually went wrong when running test10 in project-1.
+Hence added fork="true" for all the java task in the file.
+
+-->
+
+<project name="e0210" default="run">
+
+	<!-- To use the loop and if functionalities -->
+	<taskdef resource="net/sf/antcontrib/antcontrib.properties">
+		<classpath>
+			<pathelement location="lib/ant-contrib-0.6.jar" />
+		</classpath>
+	</taskdef>
+
+	<!-- Classpath used to run SOOT -->
+	<path id="e0210.classpath">
+		<pathelement location="bin" />
+		<pathelement location="lib/soot-nightly-05082016.jar" />
+		<pathelement location="lib/jgrapht-core-0.9.2.jar" />
+		<pathelement location="lib/jgrapht-ext-0.9.2.jar" />
+		<pathelement location="lib/z3/bin/com.microsoft.z3.jar"/>
+	</path>
+
+	<!-- Validate the input arguments -->
+	<condition property="valid">
+		<and>
+			<matches pattern="^project-3$" string="${project}" />
+			<or>
+				<!-- Change the regex to add more testcases beyond test20 -->
+				<!-- TODO: This allows test0 as well -->
+				<matches pattern="^test([1]?\d|2[012345])$" string="${testcase}" />
+				<matches pattern="^testall$" string="${testcase}" />
+			</or>
+		</and>
+	</condition>
+	<fail message="Arguments are not valid!" unless="valid" />
+
+	<property name="summary" value="Summary of the execution:${line.separator}" />
+
+
+	<target name="clean-build">
+		<!-- Clean the project directory -->
+		<ant antfile="build.xml" target="clean">
+		</ant>
+
+		<delete dir="sootOutput" />
+	</target>
+
+	<target name="clean-testcases">
+		<!-- Clean the test case directory -->
+		<ant antfile="run.xml" target="clean" dir="Testcases/">
+		</ant>
+	</target>
+
+	<target name="clean-all" depends="clean-build,clean-testcases">
+	</target>
+
+
+
+	<!-- "run" MODE with "testall" -->
+	<target name="-runall">
+		<!-- Loop for all the test cases -->
+		<!-- Change the list to add more test cases -->
+		<for list="1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25" param="num">
+			<sequential>
+
+				<!-- Run SOOT for each test case -->
+				<java classname="e0210.Main" fork="true">
+					<classpath refid="e0210.classpath" />
+					<arg value="${project}" />
+					<arg value="test@{num}" />
+				</java>
+
+				<echo />
+				<echo>[Completed test@{num}]</echo>
+				<echo />
+
+			</sequential>
+		</for>
+	</target>
+
+	<!-- "run" MODE for a single test case -->
+	<target name="-runsingle">
+		<java classname="e0210.Main" failonerror="true" fork="true">
+			<classpath refid="e0210.classpath" />
+			<arg value="${project}" />
+			<arg value="${testcase}" />
+		</java>
+	</target>
+
+	<!-- "run" MODE to run SOOT on the test case -->
+	<target name="run">
+
+		<!-- Execute the build.xml file to build the project -->
+		<ant antfile="build.xml">
+		</ant>
+
+		<!-- Create the JAR file for the project in the project directory -->
+		<ant antfile="run.xml" dir="Testcases/${project}">
+		</ant>
+
+		<!-- Call the target based on whether "testall" or not -->
+		<if>
+			<equals arg1="${testcase}" arg2="testall" />
+			<then>
+				<antcall target="-runall" />
+			</then>
+			<else>
+				<antcall target="-runsingle" />
+			</else>
+		</if>
+	</target>
+
+
+
+	<!-- "test" MODE with "testall" -->
+	<target name="-testall">
+
+		<!-- Create output directory -->
+		<mkdir dir="Testcases/${project}/output" />
+		<mkdir dir="Testcases/${project}/processed-output" />
+
+		<!-- Loop for all the test cases -->
+		<!-- Change the list to add more test cases -->
+		<for list="1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25" param="num">
+			<sequential>
+
+				<!-- Remove old sootBin folder -->
+				<delete dir="Testcases/${project}/sootBin/test@{num}" />
+
+				<!-- Run SOOT -->
+				<java classname="e0210.Main" fork="true">
+					<classpath refid="e0210.classpath" />
+					<arg value="${project}" />
+					<arg value="test@{num}" />
+				</java>
+
+				<echo />
+				<echo>[Completed "run" mode for test@{num}]</echo>
+				<echo />
+
+				<!-- Remove old output file -->
+				<delete file="Testcases/${project}/output/test@{num}">
+				</delete>
+
+				<echo>[Executing test@{num}]</echo>
+
+				<!-- Execute the test case with the "input" file as the argument -->
+				<!-- Redirect the output to a output file -->
+				<loadfile property="input@{num}" srcFile="Testcases/${project}/input/test@{num}" />
+				<java classname="test@{num}.Main" fork="true">
+					<redirector output="Testcases/${project}/output/test@{num}" error="Testcases/${project}/output/test@{num}.error" alwayslog="true" />
+					<classpath>
+						<pathelement location="Testcases/${project}/sootBin/" />
+					</classpath>
+					<arg line="${input@{num}}" />
+				</java>
+
+				<!-- Remove old processed-output file -->
+				<delete file="Testcases/${project}/processed-output/test@{num}">
+				</delete>
+
+				<echo />
+				<echo>[Post-processing for test@{num}]</echo>
+				<echo />
+
+				<!-- Run the program which does post-processing -->
+				<java classname="e0210.ProcessOutput" fork="true">
+					<classpath refid="e0210.classpath" />
+					<arg value="${project}" />
+					<arg value="test@{num}" />
+				</java>
+
+				<echo />
+				<echo>[Completed post-processing for test@{num}]</echo>
+				<echo />
+
+				<echo />
+				<echo>[Checking the output of test@{num}]</echo>
+				<echo />
+
+				<!-- Run diff on the output files to verify the correctness -->
+				<exec executable="sh" resultproperty="exit-code-@{num}">
+					<redirector output="Testcases/${project}/output/test@{num}.result" alwayslog="true" />
+					<arg value="-c" />
+					<arg value="diff Testcases/output/${project}/test@{num} Testcases/${project}/processed-output/test@{num} ; if [ $? -eq 0 ]; then echo PASS; else echo FAIL; return 1; fi" />
+				</exec>
+
+				<if>
+					<equals arg1="${exit-code-@{num}}" arg2="1" />
+					<then>
+						<var name="temp" value="${summary}Test @{num} - FAIL${line.separator}" />
+						<var name="summary" value="${temp}" />
+					</then>
+					<else>
+						<var name="temp" value="${summary}Test @{num} - Pass${line.separator}" />
+						<var name="summary" value="${temp}" />
+					</else>
+				</if>
+
+				<echo />
+				<echo>[Completed "test" mode for test@{num}]</echo>
+				<echo />
+			</sequential>
+		</for>
+
+		<echo />
+		<echo>${summary}</echo>
+		<echo />
+
+	</target>
+
+	<target name="-testsingle">
+
+		<!-- Create output directory -->
+		<mkdir dir="Testcases/${project}/output" />
+		<mkdir dir="Testcases/${project}/processed-output" />
+
+		<!-- Remove old sootBin folder -->
+		<delete dir="Testcases/${project}/sootBin/${testcase}" />
+
+		<!-- Run SOOT -->
+		<java classname="e0210.Main" failonerror="true" fork="true">
+			<classpath refid="e0210.classpath" />
+			<arg value="${project}" />
+			<arg value="${testcase}" />
+		</java>
+
+		<echo />
+		<echo>[Completed "run" mode for ${testcase}]</echo>
+		<echo />
+
+		<!-- Remove old output file -->
+		<delete file="Testcases/${project}/output/${testcase}">
+		</delete>
+
+		<echo>[Executing ${testcase}]</echo>
+
+		<!-- Execute the test case with the "input" file as the argument -->
+		<!-- Redirect the output to a output file -->
+		<loadfile property="input" srcFile="Testcases/${project}/input/${testcase}" />
+		<java classname="${testcase}.Main" failonerror="true" fork="true">
+			<redirector output="Testcases/${project}/output/${testcase}" error="Testcases/${project}/output/${testcase}.error" alwayslog="true" />
+			<classpath>
+				<pathelement location="Testcases/${project}/sootBin/" />
+			</classpath>
+			<arg line="${input}" />
+		</java>
+
+		<!-- Remove old processed-output file -->
+		<delete file="Testcases/${project}/processed-output/${testcase}">
+		</delete>
+
+		<echo />
+		<echo>[Post-processing for ${testcase}]</echo>
+		<echo />
+
+		<!-- Run the program which does symbolic execution and constraint solving -->
+		<java classname="e0210.TraceMaker" failonerror="true" fork="true">
+			<classpath refid="e0210.classpath" />
+			<arg value="${project}" />
+			<arg value="${testcase}" />
+		</java>
+
+		<echo />
+		<echo>[Completed post-processing for ${testcase}]</echo>
+		<echo />
+
+		<echo />
+		<echo>[Checking the output for ${testcase}]</echo>
+		<echo />
+
+		<!-- Run diff on the output files to verify the correctness -->
+		<!--
+		<exec executable="sh" resultproperty="exit-code">
+			<redirector output="Testcases/${project}/output/${testcase}.result" alwayslog="true" />
+			<arg value="-c" />
+			<arg value="diff Testcases/output/${project}/${testcase} Testcases/${project}/processed-output/${testcase} ; if [ $? -eq 0 ]; then echo PASS; else echo FAIL; return 1; fi" />
+		</exec>
+		-->
+
+		<echo />
+		<echo>[Completed "test" mode for ${testcase}]</echo>
+		<echo />
+	</target>
+
+	<!-- "test" MODE to verify the output for the test case -->
+	<target name="test">
+
+		<!-- Execute the build.xml file to build the project -->
+		<ant antfile="build.xml">
+		</ant>
+
+		<!-- Create the JAR file for the project in the project directory -->
+		<ant antfile="run.xml" dir="Testcases/${project}">
+		</ant>
+
+		<!-- Call the target based on whether "testall" or not -->
+		<if>
+			<equals arg1="${testcase}" arg2="testall" />
+			<then>
+				<antcall target="-testall" />
+			</then>
+			<else>
+				<antcall target="-testsingle" />
+			</else>
+		</if>
+	</target>
+
+</project>

@@ -40,7 +40,7 @@ Hence added fork="true" for all the java task in the file.
 	<!-- Validate the input arguments -->
 	<condition property="valid">
 		<and>
-			<matches pattern="^project-[1-4]$" string="${project}" />
+			<matches pattern="^project-[1-2]$" string="${project}" />
 			<or>
 				<!-- Change the regex to add more testcases beyond test20 -->
 				<!-- TODO: This allows test0 as well -->

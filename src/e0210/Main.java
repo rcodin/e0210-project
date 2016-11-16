@@ -51,6 +51,8 @@ public class Main {
 		base_args.add("jdk.net");
 		base_args.add("-exclude");
 		base_args.add("java.lang");
+		base_args.add("-exclude");
+        base_args.add("jdk.internal.*"); 
 		base_args.add("-no-bodies-for-excluded");
 
 		// Retain variable names from the bytecode
