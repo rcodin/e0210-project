@@ -81,16 +81,16 @@ public class TraceMaker {
         */
 
 		// Output the global trace 
-		PrintWriter globalTraceWriter = new PrintWriter(globalTraceOutPath);
-		globalTraceWriter.print("");
+		// PrintWriter globalTraceWriter = new PrintWriter(globalTraceOutPath);
+		// globalTraceWriter.print("");
       
-		globalTraceWriter.close();
+		// globalTraceWriter.close();
 
 		// Output the tuples
-		PrintWriter tupleWriter = new PrintWriter(tupleOutPath);
-		tupleWriter.print("");
+		// PrintWriter tupleWriter = new PrintWriter(globalTraceOutPath);
+		// tupleWriter.print("");
 
-		tupleWriter.close();
+		// tupleWriter.close();
 
 		return;
 	}
