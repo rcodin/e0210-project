@@ -270,6 +270,7 @@ public class SymbolicExecution extends SceneTransformer {
 		Stack<ArrayList<Integer>> blockIDStack = new Stack();//each entry is a list of block IDs left to traverse in a function call
 		Stack<Iterator<Unit>> unitItStack = new Stack();//each entry is iterator will go through Units 
 		Stack<Integer> currBlockIDStack = new Stack();
+		Stack<String> returnStack = new Stack();
 		/*<tid,<event no, trace entry>>
 		*/
 		
@@ -345,8 +346,8 @@ public class SymbolicExecution extends SceneTransformer {
 			System.out.println(sootClass.toString());
 			while (sootMethodIt.hasNext()) {
 				SootMethod sootMethod = sootMethodIt.next();
-				// if (sootMethod.hasActiveBody())
-				// 	System.out.println(sootMethod.getActiveBody().toString());
+				if (sootMethod.hasActiveBody())
+					System.out.println(sootMethod.getActiveBody().toString());
 			}
 		}
 		StringTokenizer inputTokenizer = new StringTokenizer(input," ");
@@ -428,6 +429,7 @@ public class SymbolicExecution extends SceneTransformer {
 			currBlockIDStack.push(temp5);
 			blockIDStack.push(blockIDs);
 			unitItStack.push(unitIt);
+			returnStack.push(null);
 			if (tID.equals("0")) {
 				ArrayList<Block> clinitBlocks = getBlocks(Scene.v().getMethod(clinitMethod));
 				currBlockIDStack.push(0);
@@ -438,6 +440,7 @@ public class SymbolicExecution extends SceneTransformer {
 				functionCallStack.push(clinitEntry);
 				blockIDStack.push(new ArrayList());
 				unitItStack.push(clinitBlocks.get(0).iterator());
+				returnStack.push(null);
 			}
 			//generic code will run using stack
 			outloop:
@@ -447,6 +450,7 @@ public class SymbolicExecution extends SceneTransformer {
 				blockIDs = blockIDStack.pop();
 				unitIt = unitItStack.pop();
 				Integer currBlockID = currBlockIDStack.pop();
+				String returnEntry = returnStack.pop();
 				// System.out.println(Scene.v().getMethod(temp1.get(1)).getActiveBody());
 				
 				while (unitIt.hasNext()) {
@@ -455,7 +459,7 @@ public class SymbolicExecution extends SceneTransformer {
 					Status stat1 = solver.check();
 					int statInt1 = stat1.toInt();
 					if (statInt1 == 1)
-						System.out.println("\n\n"+"[SATISFIABLE]"+"\n\n");
+					System.out.println("\n\n"+"[SATISFIABLE]"+"\n\n");
 					System.out.println(unit.toString());
 					if(unit instanceof InvokeStmt) {
 						InvokeStmt invokeStmt = (InvokeStmt)unit;
@@ -608,6 +612,7 @@ public class SymbolicExecution extends SceneTransformer {
 									}
 								}
 								else {
+									System.out.println("We are fucked");
 										break;
 								}	
 							}
@@ -622,11 +627,13 @@ public class SymbolicExecution extends SceneTransformer {
 								blockIDStack.push(blockIDs);
 								unitItStack.push(stmtIt);
 								currBlockIDStack.push(blockID);
+								returnStack.push(returnEntry);
 							}
 							else {
 								blockIDStack.push(blockIDs);
 								unitItStack.push(unitIt);
 								currBlockIDStack.push(currBlockID);
+								returnStack.push(null);
 							}
 
 								//put thr function in stack
@@ -635,6 +642,7 @@ public class SymbolicExecution extends SceneTransformer {
 							temp2.add(calledMethod.getSignature());
 							temp2.add(new Integer(i).toString());
 							functionCallStack.push(temp2);
+							System.out.println("Clalled method signaute is : "+calledMethod.getSignature());
 							blockIDs = getBlockIDList(paths, table.get(tID).get(calledMethod.getSignature()).get(i));
 							Integer blockID = blockIDs.remove(0);
 							ArrayList<Block> blockList = getBlocks(calledMethod);
@@ -644,6 +652,7 @@ public class SymbolicExecution extends SceneTransformer {
 							currBlockIDStack.push(blockID);
 							table.get(tID).get(calledMethod.getSignature()).
 										put(i, getRemovedArrayElement());
+							returnStack.push(null);
 							// ArrayList<Integer> ret =  getRemovedArrayElement();
 							continue outloop;
 							// }
@@ -1410,6 +1419,7 @@ public class SymbolicExecution extends SceneTransformer {
 									}
 								}
 								else {
+										// System.out.println("Things are fucked");
 										break;
 								}	
 							}
@@ -1424,11 +1434,13 @@ public class SymbolicExecution extends SceneTransformer {
 								blockIDStack.push(blockIDs);
 								unitItStack.push(stmtIt);
 								currBlockIDStack.push(blockID);
+								returnStack.push(returnEntry);
 							}
 							else {
 								blockIDStack.push(blockIDs);
 								unitItStack.push(unitIt);
-								currBlockIDStack.push(currBlockID);	
+								currBlockIDStack.push(currBlockID);
+								returnStack.push(returnEntry);
 							}
 
 								//put thr function in stack
@@ -1446,6 +1458,10 @@ public class SymbolicExecution extends SceneTransformer {
 							currBlockIDStack.push(blockID);
 							table.get(tID).get(calledMethod.getSignature()).
 										put(i, getRemovedArrayElement());
+							//<tID, Write, var name , ref number, value, type, Constant/Variable>
+							ArrayList<String> writeEvents = new ArrayList(7);
+
+							returnStack.push(leftOp.toString());
 							continue outloop;
 						}
 						//$i = 5 or $i = $r
@@ -2054,7 +2070,32 @@ public class SymbolicExecution extends SceneTransformer {
 							}
 						}
 					}
-				}
+					else if (unit instanceof ReturnStmt) {
+						ReturnStmt returnStmt = (ReturnStmt)unit;
+						String callingfunctionReturn = returnEntry;
+						Value returnValue = returnStmt.getOp();
+
+						if (callingfunctionReturn != null) {
+							System.out.println("proper return");
+							if (locRefCounter.get(returnEntry) != null)
+								locRefCounter.put(returnEntry, locRefCounter.get(returnEntry) + 1);
+							else 
+								locRefCounter.put(returnEntry, 1);
+							locVarType.put(returnEntry, "Integr");//handling function retuns only for integers
+							String retValCallingFunction = new String(returnEntry+"_"+locRefCounter.get(returnEntry));
+							String returnValueSym = new String(returnValue.toString()+"_"+locRefCounter.get(returnValue.toString()));
+							IntExpr intExpr1 = ctx.mkIntConst(retValCallingFunction);
+							IntExpr intExpr2 = ctx.mkIntConst(returnValueSym);
+							BoolExpr boolExpr = ctx.mkEq(intExpr1 , intExpr2);
+							solver.add(boolExpr);
+						}
+						System.out.println("Return Statement operator is : "+returnStmt.getOp());
+					}
+					else {
+						System.out.println("Statement not handled");
+					}
+					continue;
+					}
 				if (blockIDs.isEmpty()) {
 					continue;
 				}
@@ -2066,6 +2107,7 @@ public class SymbolicExecution extends SceneTransformer {
 					Iterator<Unit> stmtIt = blockList.get(blockID).iterator();
 					unitItStack.push(stmtIt);
 					currBlockIDStack.push(blockID);
+					returnStack.push(returnEntry);
 				}
 			}
 
