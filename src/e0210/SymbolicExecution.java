@@ -595,7 +595,29 @@ public class SymbolicExecution extends SceneTransformer {
 
 							//symbolic constraint generation
 							SootMethod calledMethod = invokeStmt.getInvokeExpr().getMethod();
-							
+							if (invokeStmt.getInvokeExpr() instanceof InstanceInvokeExpr) {
+								InstanceInvokeExpr instInvokeExpr = (InstanceInvokeExpr)invokeStmt.getInvokeExpr();
+
+								System.out.println("Instance invoke expression base is : "+ instInvokeExpr.getBase());
+								System.out.println("called function class : "+ instInvokeExpr.getMethod().getDeclaringClass().toString());
+								System.out.println("Type of calling object : "+ instInvokeExpr.getBase().getType().toString());
+								// System.out.println("The type of instance invoke expression is : "+ instInvokeExpr.getType());
+								if (!instInvokeExpr.getMethod().getDeclaringClass().toString().equals(instInvokeExpr.getBase().getType().toString())) {
+									if (!instInvokeExpr.getBase().toString().equals("this")) {
+										System.out.println("called function class : "+ instInvokeExpr.getMethod().getDeclaringClass().toString());
+										System.out.println("Type of calling object : "+ instInvokeExpr.getBase().getType().toString());
+										// SootClass correctClass = Scene.v().getSootClass(instInvokeExpr.getBase().getType().toString());
+										// calledMethod.setDeclaringClass(correctClass);
+										String calledMethodString = calledMethod.toString();
+										calledMethodString = calledMethodString.replace(instInvokeExpr.getMethod().getDeclaringClass().toString(), instInvokeExpr.getBase().getType().toString());
+										
+										calledMethod = Scene.v().getMethod(calledMethodString);
+									}
+								}
+							}
+							// System.out.println("called function class : "+ instInvokeExpr.getMethod().getDeclaringClass().toString());
+							// System.out.println("Type of calling object : "+ instInvokeExpr.getBase().getType().toString());
+							// 
 							// calledMethod
 							int i = 0;
 							while (true) {
@@ -633,7 +655,7 @@ public class SymbolicExecution extends SceneTransformer {
 								blockIDStack.push(blockIDs);
 								unitItStack.push(unitIt);
 								currBlockIDStack.push(currBlockID);
-								returnStack.push(null);
+								returnStack.push(returnEntry);
 							}
 
 								//put thr function in stack
