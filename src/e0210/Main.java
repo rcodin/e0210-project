@@ -14,20 +14,31 @@ import java.util.ArrayList;
 
 import soot.PackManager;
 import soot.Transform;
+import soot.*;
+import soot.util.*;
+import soot.jimple.*;
+import soot.options.Options;
 
 public class Main {
 
+	public static void configure(String classpath) {
+
+        Options.v().set_verbose(false);
+        Options.v().set_keep_line_number(true);
+        Options.v().set_src_prec(Options.src_prec_class);
+        Options.v().set_soot_classpath(classpath);
+        Options.v().set_prepend_classpath(true);
+    }
 	public static void main(String[] args) {
 
 		String project = args[0];
 		String testcase = args[1];
 
+		System.out.println(args[0]+" "+args[1]);
 		ArrayList<String> base_args = new ArrayList<String>();
 
 		// This is done so that SOOT can find java.lang.Object
 		base_args.add("-prepend-classpath");
-		
-		base_args.add("-w");
 
 		// Consider the Main Class as an application and not as a library
 		base_args.add("-app");
@@ -54,8 +65,9 @@ public class Main {
 		base_args.add("class");
 
 		// Add the class path i.e. path to the JAR file
-		base_args.add("-soot-class-path");
-		base_args.add("Testcases/" + project + "/" + project + ".jar");
+		// base_args.add("-soot-class-path");
+		// base_args.add("Testcases/" + project + "/" + project + ".jar");
+		configure("Testcases/" + project + "/" + project + ".jar:bin/");
 
 		// The Main class for the application
 		base_args.add("-main-class");
@@ -69,12 +81,12 @@ public class Main {
 
 		Analysis obj = new Analysis();
 
+		Scene.v().addBasicClass("java.io.PrintStream", SootClass.SIGNATURES);
+		Scene.v().addBasicClass("java.lang.System", SootClass.SIGNATURES);
 		PackManager.v().getPack("jtp").add(new Transform("jtp.MyAnalysis", obj));
 
 		soot.Main.main(base_args.toArray(new String[base_args.size()]));
 
-		obj.finish(testcase);
-		
 		return;
 	}
 

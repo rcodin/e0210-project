@@ -81,16 +81,16 @@ public class TraceMaker {
         */
 
 		// Output the global trace 
-		PrintWriter globalTraceWriter = new PrintWriter(globalTraceOutPath);
-		globalTraceWriter.print("");
+		// PrintWriter globalTraceWriter = new PrintWriter(globalTraceOutPath);
+		// globalTraceWriter.print("");
       
-		globalTraceWriter.close();
+		// globalTraceWriter.close();
 
 		// Output the tuples
-		PrintWriter tupleWriter = new PrintWriter(tupleOutPath);
-		tupleWriter.print("");
+		// PrintWriter tupleWriter = new PrintWriter(globalTraceOutPath);
+		// tupleWriter.print("");
 
-		tupleWriter.close();
+		// tupleWriter.close();
 
 		return;
 	}
@@ -142,7 +142,7 @@ public class TraceMaker {
 		base_args.add("-output-dir");
 		base_args.add("Testcases/" + project + "/sootBin/");
 
-		SymbolicExecution obj = new SymbolicExecution();
+		SymbolicExecution obj = new SymbolicExecution(project, testcase);
 
 		PackManager.v().getPack("wjtp").add(new Transform("wjtp.MyAnalysis", obj));
 

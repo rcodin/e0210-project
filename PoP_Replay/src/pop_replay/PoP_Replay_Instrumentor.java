@@ -37,10 +37,10 @@ public class PoP_Replay_Instrumentor extends SceneTransformer
              || curClass.getName().contains("popUtil.PoP_Util")) {
                 continue;
             }
-            
+            // PoP_Replay_Util poUtil = new PoP_Replay_Util();
             List<SootMethod> allMethods = curClass.getMethods();
             for (SootMethod curMethod: allMethods) {   
-            
+                
             }  
         }  
     }
