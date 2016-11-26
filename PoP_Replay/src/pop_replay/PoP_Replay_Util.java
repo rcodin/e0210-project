@@ -87,21 +87,25 @@ public class PoP_Replay_Util
 	}
 	/* You can modify criticalBefore() to receive the required arguments */
 	public static void criticalBefore () {
-		ArrayList<String> globalTraceEntry = globalEntriesQueue.peek();
+		
 		String tID =  threadID[(int)Thread.currentThread().getId()];
 
-        System.out.println(globalTraceEntry.get(0)+" "+tID);
-		while (!globalTraceEntry.get(0).equals(tID)) {
+        // System.out.println(globalTraceEntry.get(0)+" "+tID);
+        synchronized(obj) {
+		      ArrayList<String> globalTraceEntry = globalEntriesQueue.peek();
             System.out.println("Inside"+globalTraceEntry.get(0)+" "+tID);
-            synchronized(obj) {
-       //          try {
-    			// 	obj.wait();
-    			// }
-    			// catch (InterruptedException e) {
-    			// 	e.printStackTrace();
-    			// }
-                globalTraceEntry = globalEntriesQueue.peek();
-            }
+            
+                try {
+                    while (!globalTraceEntry.get(0).equals(tID)){
+    				obj.wait();
+                    globalTraceEntry = globalEntriesQueue.peek();
+                }
+    			}
+    			catch (InterruptedException e) {
+    				e.printStackTrace();
+    			}
+                
+            
 		}
 	}
 
@@ -110,7 +114,7 @@ public class PoP_Replay_Util
         System.out.println("criticalAfter");
         synchronized(obj) {
             globalEntriesQueue.remove();
-            // obj.notifyAll();
+            obj.notifyAll();
         }
         System.out.println("paassedcriticalAfter");
 	}
