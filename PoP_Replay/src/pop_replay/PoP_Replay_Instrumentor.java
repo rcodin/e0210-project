@@ -52,8 +52,9 @@ public class PoP_Replay_Instrumentor extends SceneTransformer
 			Iterator<SootField> fieldIt = curClass.getFields().iterator();
 			while (fieldIt.hasNext()) {
 				SootField sootField = fieldIt.next();
-				if (!(sootField.getType().toString().equals("java.lang.Integer"))) {
+				if ((sootField.getType().toString().equals("java.lang.Integer"))) {
 					sharedVars.put(sootField.toString(), 0);
+					// System.out.println("Global var"+sootField.toString());
 				} 
 			}
 			/* These classes must be skipped */
@@ -61,9 +62,11 @@ public class PoP_Replay_Instrumentor extends SceneTransformer
 			|| curClass.getName().contains("popUtil.PoP_Util")) {
 				continue;
 			}
+			// System.out.println(curClass.toString());
 			// PoP_Replay_Util poUtil = new PoP_Replay_Util();
 			List<SootMethod> allMethods = curClass.getMethods();
-			for (SootMethod curMethod: allMethods) {   
+			for (SootMethod curMethod: allMethods) {
+				// System.out.println(curMethod.toString());
 				if (curMethod.hasActiveBody()) {
 					Body body = curMethod.getActiveBody();
 					Iterator<Unit> unitIt = body.getUnits().snapshotIterator();
@@ -79,10 +82,11 @@ public class PoP_Replay_Instrumentor extends SceneTransformer
 							if (inv instanceof VirtualInvokeExpr) {
 								VirtualInvokeExpr vInv = (VirtualInvokeExpr)inv;
 								if(stmt.toString().contains("void start()")) {
-									// System.out.println("setting tiD");
+									System.out.println("setting tiD");
 									Local tLoc = (Local)vInv.getBase();//thread local variable  
 									InvokeStmt setStmt = Jimple.v().newInvokeStmt(Jimple.v().newStaticInvokeExpr(setTID.makeRef(), tLoc));
 									units.insertBefore(setStmt, stmt);
+									// System.out.println(stmt.toString()+" is instrumented for tid");
 								}
 							}
 						}
@@ -92,17 +96,25 @@ public class PoP_Replay_Instrumentor extends SceneTransformer
 							units.insertBefore(criticalBeforeStmt, stmt);
 							InvokeStmt criticalAfterStmt = Jimple.v().newInvokeStmt(Jimple.v().newStaticInvokeExpr(criticalAfter.makeRef()));
 							units.insertAfter(criticalAfterStmt, stmt);
+							// System.out.println(stmt.toString()+" is instrumented");
 						}
 						else if (stmt instanceof AssignStmt) {
 							AssignStmt assign  = (AssignStmt)stmt;
 							String leftOp = assign.getLeftOp().toString();
+							String rightOp = assign.getRightOp().toString();
 
-							if (sharedVars.get(leftOp) != null) {
+							if ((sharedVars.get(leftOp) != null)||(sharedVars.get(rightOp) != null)) {
 								InvokeStmt criticalBeforeStmt = Jimple.v().newInvokeStmt(Jimple.v().newStaticInvokeExpr(criticalBefore.makeRef()));
 								units.insertBefore(criticalBeforeStmt, stmt);
 								InvokeStmt criticalAfterStmt = Jimple.v().newInvokeStmt(Jimple.v().newStaticInvokeExpr(criticalAfter.makeRef()));
 								units.insertAfter(criticalAfterStmt, stmt);
+								// System.out.println(stmt.toString()+" is instrumented");
+								continue;
 							}
+							// System.out.println(stmt.toString()+" is not instrumented");
+						}
+						else {
+							// System.out.println(stmt.toString()+" is not instrumented");
 						}
 					}
 				}
