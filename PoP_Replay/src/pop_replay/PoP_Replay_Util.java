@@ -54,7 +54,7 @@ public class PoP_Replay_Util
 			globalEntriesQueue.add(parseGlobalTraceEntry);
 		}
 	}
-	public synchronized static void setTID(Thread child) {
+	public static void setTID (Thread child) {
 		String temp = new String();//temporary variable to create the thread ID string
         Long cID, pID;//cID is child ID and pID is parent ID
         Thread parent;
@@ -65,6 +65,7 @@ public class PoP_Replay_Util
         temp = temp.concat(threadID[pID.intValue()]+"."+ String.valueOf(counter[pID.intValue()]));
         counter[pID.intValue()] ++;
         threadID[(int)child.getId()] = temp;
+        System.out.println("Setting thread ID");
 	}
 	/* You can modify criticalBefore() to receive the required arguments */
 	public static void criticalBefore () {
